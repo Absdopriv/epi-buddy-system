@@ -1,6 +1,7 @@
-import { HardHat, Moon, Sun } from "lucide-react";
+import { HardHat, Moon, Sun, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export const Navbar = () => {
   const [isDark, setIsDark] = useState(false);
@@ -31,24 +32,36 @@ export const Navbar = () => {
               Gestão de EPI - <span className="font-normal">{empresaNome}</span>
             </h1>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleTheme}
-            className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20"
-          >
-            {isDark ? (
-              <>
-                <Sun className="h-4 w-4 mr-2" />
-                Modo Claro
-              </>
-            ) : (
-              <>
-                <Moon className="h-4 w-4 mr-2" />
-                Modo Escuro
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link to="/auth">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Login</span>
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20"
+            >
+              {isDark ? (
+                <>
+                  <Sun className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Modo Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Modo Escuro</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </nav>

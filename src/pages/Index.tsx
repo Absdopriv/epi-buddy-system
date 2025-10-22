@@ -3,11 +3,12 @@ import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EPIForm } from "@/components/EPIForm";
 import { FuncionarioForm } from "@/components/FuncionarioForm";
-import { EPITable } from "@/components/EPITable";
-import { FuncionarioTable } from "@/components/FuncionarioTable";
+import { FuncionarioEPIManager } from "@/components/FuncionarioEPIManager";
+import { EPIsVencidas } from "@/components/EPIsVencidas";
 import { UpdateCAModal } from "@/components/UpdateCAModal";
-import { HardHat, User, List, Users } from "lucide-react";
+import { HardHat, User, Users, AlertTriangle } from "lucide-react";
 import { EPI, Funcionario } from "@/types";
+import { toast } from "sonner";
 
 const Index = () => {
   const [epis, setEpis] = useState<EPI[]>([]);
@@ -54,6 +55,20 @@ const Index = () => {
     setFuncionarios(funcionarios.filter((func) => func.id !== id));
   };
 
+  const handleAssignEPI = (epiId: string, funcionarioId: string) => {
+    setEpis(epis.map(epi => 
+      epi.id === epiId ? { ...epi, funcionarioId } : epi
+    ));
+    toast.success("EPI atribuído ao funcionário!");
+  };
+
+  const handleUnassignEPI = (epiId: string) => {
+    setEpis(epis.map(epi => 
+      epi.id === epiId ? { ...epi, funcionarioId: undefined } : epi
+    ));
+    toast.success("EPI desvinculado do funcionário!");
+  };
+
   const openUpdateModal = (epi: EPI) => {
     setSelectedEPI(epi);
     setModalOpen(true);
@@ -63,7 +78,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container mx-auto px-4 pt-24 pb-8">
-        <Tabs defaultValue="epi" className="space-y-6">
+        <Tabs defaultValue="gerenciar" className="space-y-6">
           <TabsList className="grid grid-cols-2 lg:grid-cols-4 w-full">
             <TabsTrigger value="epi" className="flex items-center gap-2">
               <HardHat className="h-4 w-4" />
@@ -75,15 +90,15 @@ const Index = () => {
               <span className="hidden sm:inline">Cadastro de Funcionário</span>
               <span className="sm:hidden">Funcionário</span>
             </TabsTrigger>
-            <TabsTrigger value="lista-epi" className="flex items-center gap-2">
-              <List className="h-4 w-4" />
-              <span className="hidden sm:inline">Lista de EPIs</span>
-              <span className="sm:hidden">EPIs</span>
-            </TabsTrigger>
-            <TabsTrigger value="lista-funcionario" className="flex items-center gap-2">
+            <TabsTrigger value="gerenciar" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Lista de Funcionários</span>
-              <span className="sm:hidden">Funcionários</span>
+              <span className="hidden sm:inline">Funcionários e EPIs</span>
+              <span className="sm:hidden">Gerenciar</span>
+            </TabsTrigger>
+            <TabsTrigger value="vencidas" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="hidden sm:inline">EPIs Vencidas</span>
+              <span className="sm:hidden">Vencidas</span>
             </TabsTrigger>
           </TabsList>
 
@@ -95,18 +110,22 @@ const Index = () => {
             <FuncionarioForm onAdd={handleAddFuncionario} />
           </TabsContent>
 
-          <TabsContent value="lista-epi">
-            <EPITable
+          <TabsContent value="gerenciar">
+            <FuncionarioEPIManager
+              funcionarios={funcionarios}
               epis={epis}
-              onDelete={handleDeleteEPI}
+              onAssignEPI={handleAssignEPI}
+              onUnassignEPI={handleUnassignEPI}
               onUpdateCA={openUpdateModal}
+              onDeleteEPI={handleDeleteEPI}
             />
           </TabsContent>
 
-          <TabsContent value="lista-funcionario">
-            <FuncionarioTable
+          <TabsContent value="vencidas">
+            <EPIsVencidas
+              epis={epis}
               funcionarios={funcionarios}
-              onDelete={handleDeleteFuncionario}
+              onUpdateCA={openUpdateModal}
             />
           </TabsContent>
         </Tabs>

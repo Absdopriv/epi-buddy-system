@@ -7,6 +7,7 @@ export interface EPI {
   uso: string;
   fabricante: string;
   entrega: string;
+  funcionarioId?: string;
 }
 
 export interface Funcionario {

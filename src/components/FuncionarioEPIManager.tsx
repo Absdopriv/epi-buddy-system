@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { 
   Select, 
   SelectContent, 
@@ -16,7 +18,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Edit2, Trash2, Plus, AlertTriangle } from "lucide-react";
+import { Edit2, Trash2, Plus, AlertTriangle, Search } from "lucide-react";
 import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
@@ -40,6 +42,7 @@ export const FuncionarioEPIManager = ({
   onUpdateCA,
   onDeleteEPI
 }: FuncionarioEPIManagerProps) => {
+  const [searchTerm, setSearchTerm] = useState("");
   
   const getExpirationStatus = (validade: string) => {
     const days = differenceInDays(parseISO(validade), new Date());
@@ -63,16 +66,42 @@ export const FuncionarioEPIManager = ({
     }
   };
 
+  const filteredFuncionarios = funcionarios.filter(funcionario =>
+    funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
+      {/* Campo de pesquisa */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Pesquisar funcionário por nome..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {funcionarios.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
             Nenhum funcionário cadastrado
           </CardContent>
         </Card>
+      ) : filteredFuncionarios.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            Nenhum funcionário encontrado com o nome "{searchTerm}"
+          </CardContent>
+        </Card>
       ) : (
-        funcionarios.map((funcionario) => {
+        filteredFuncionarios.map((funcionario) => {
           const funcionarioAtribuicoes = atribuicoes.filter(at => at.funcionarioId === funcionario.id);
           const funcionarioEPIs = funcionarioAtribuicoes.map(at => {
             const epi = epis.find(e => e.id === at.epiId);

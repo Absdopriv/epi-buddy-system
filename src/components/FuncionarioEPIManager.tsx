@@ -17,22 +17,24 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Edit2, Trash2, Plus, AlertTriangle } from "lucide-react";
-import { EPI, Funcionario } from "@/types";
+import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
 
 interface FuncionarioEPIManagerProps {
   funcionarios: Funcionario[];
   epis: EPI[];
+  atribuicoes: EPIAtribuicao[];
   onAssignEPI: (epiId: string, funcionarioId: string) => void;
-  onUnassignEPI: (epiId: string) => void;
+  onUnassignEPI: (atribuicaoId: string) => void;
   onUpdateCA: (epi: EPI) => void;
   onDeleteEPI: (id: string) => void;
 }
 
 export const FuncionarioEPIManager = ({ 
   funcionarios, 
-  epis, 
+  epis,
+  atribuicoes,
   onAssignEPI,
   onUnassignEPI,
   onUpdateCA,
@@ -61,8 +63,6 @@ export const FuncionarioEPIManager = ({
     }
   };
 
-  const availableEPIs = epis.filter(epi => !epi.funcionarioId);
-
   return (
     <div className="space-y-6">
       {funcionarios.length === 0 ? (
@@ -73,7 +73,11 @@ export const FuncionarioEPIManager = ({
         </Card>
       ) : (
         funcionarios.map((funcionario) => {
-          const funcionarioEPIs = epis.filter(epi => epi.funcionarioId === funcionario.id);
+          const funcionarioAtribuicoes = atribuicoes.filter(at => at.funcionarioId === funcionario.id);
+          const funcionarioEPIs = funcionarioAtribuicoes.map(at => {
+            const epi = epis.find(e => e.id === at.epiId);
+            return epi ? { ...epi, atribuicaoId: at.id } : null;
+          }).filter(Boolean) as (EPI & { atribuicaoId: string })[];
           
           return (
             <Card key={funcionario.id} className="animate-in fade-in duration-500">
@@ -95,14 +99,14 @@ export const FuncionarioEPIManager = ({
               </CardHeader>
               <CardContent className="pt-6">
                 {/* Atribuir novo EPI */}
-                {availableEPIs.length > 0 && (
+                {epis.length > 0 && (
                   <div className="mb-4 flex gap-2">
                     <Select onValueChange={(epiId) => onAssignEPI(epiId, funcionario.id)}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Atribuir EPI ao funcionário" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableEPIs.map((epi) => (
+                        {epis.map((epi) => (
                           <SelectItem key={epi.id} value={epi.id}>
                             {epi.nome} - CA: {epi.ca}
                           </SelectItem>
@@ -175,7 +179,7 @@ export const FuncionarioEPIManager = ({
                                   <Button
                                     variant="outline"
                                     size="icon"
-                                    onClick={() => onUnassignEPI(epi.id)}
+                                    onClick={() => onUnassignEPI(epi.atribuicaoId)}
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>

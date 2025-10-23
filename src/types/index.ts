@@ -7,7 +7,6 @@ export interface EPI {
   uso: string;
   fabricante: string;
   entrega: string;
-  funcionarioId?: string;
 }
 
 export interface Funcionario {
@@ -16,4 +15,11 @@ export interface Funcionario {
   cpf: string;
   cargo: string;
   setor: string;
+}
+
+export interface EPIAtribuicao {
+  id: string;
+  epiId: string;
+  funcionarioId: string;
+  dataEntrega: string;
 }

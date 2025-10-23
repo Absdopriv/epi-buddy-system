@@ -7,20 +7,23 @@ import { FuncionarioEPIManager } from "@/components/FuncionarioEPIManager";
 import { EPIsVencidas } from "@/components/EPIsVencidas";
 import { UpdateCAModal } from "@/components/UpdateCAModal";
 import { HardHat, User, Users, AlertTriangle } from "lucide-react";
-import { EPI, Funcionario } from "@/types";
+import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 
 const Index = () => {
   const [epis, setEpis] = useState<EPI[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [atribuicoes, setAtribuicoes] = useState<EPIAtribuicao[]>([]);
   const [selectedEPI, setSelectedEPI] = useState<EPI | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const savedEpis = localStorage.getItem("epis");
     const savedFuncionarios = localStorage.getItem("funcionarios");
+    const savedAtribuicoes = localStorage.getItem("atribuicoes");
     if (savedEpis) setEpis(JSON.parse(savedEpis));
     if (savedFuncionarios) setFuncionarios(JSON.parse(savedFuncionarios));
+    if (savedAtribuicoes) setAtribuicoes(JSON.parse(savedAtribuicoes));
   }, []);
 
   useEffect(() => {
@@ -30,6 +33,10 @@ const Index = () => {
   useEffect(() => {
     localStorage.setItem("funcionarios", JSON.stringify(funcionarios));
   }, [funcionarios]);
+
+  useEffect(() => {
+    localStorage.setItem("atribuicoes", JSON.stringify(atribuicoes));
+  }, [atribuicoes]);
 
   const handleAddEPI = (epi: EPI) => {
     setEpis([...epis, epi]);
@@ -56,16 +63,18 @@ const Index = () => {
   };
 
   const handleAssignEPI = (epiId: string, funcionarioId: string) => {
-    setEpis(epis.map(epi => 
-      epi.id === epiId ? { ...epi, funcionarioId } : epi
-    ));
+    const novaAtribuicao: EPIAtribuicao = {
+      id: `${epiId}-${funcionarioId}-${Date.now()}`,
+      epiId,
+      funcionarioId,
+      dataEntrega: new Date().toISOString().split('T')[0]
+    };
+    setAtribuicoes([...atribuicoes, novaAtribuicao]);
     toast.success("EPI atribuído ao funcionário!");
   };
 
-  const handleUnassignEPI = (epiId: string) => {
-    setEpis(epis.map(epi => 
-      epi.id === epiId ? { ...epi, funcionarioId: undefined } : epi
-    ));
+  const handleUnassignEPI = (atribuicaoId: string) => {
+    setAtribuicoes(atribuicoes.filter(at => at.id !== atribuicaoId));
     toast.success("EPI desvinculado do funcionário!");
   };
 
@@ -114,6 +123,7 @@ const Index = () => {
             <FuncionarioEPIManager
               funcionarios={funcionarios}
               epis={epis}
+              atribuicoes={atribuicoes}
               onAssignEPI={handleAssignEPI}
               onUnassignEPI={handleUnassignEPI}
               onUpdateCA={openUpdateModal}
@@ -125,6 +135,7 @@ const Index = () => {
             <EPIsVencidas
               epis={epis}
               funcionarios={funcionarios}
+              atribuicoes={atribuicoes}
               onUpdateCA={openUpdateModal}
             />
           </TabsContent>

@@ -10,16 +10,17 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { AlertTriangle, Edit2 } from "lucide-react";
-import { EPI, Funcionario } from "@/types";
+import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { differenceInDays, parseISO } from "date-fns";
 
 interface EPIsVencidasProps {
   epis: EPI[];
   funcionarios: Funcionario[];
+  atribuicoes: EPIAtribuicao[];
   onUpdateCA: (epi: EPI) => void;
 }
 
-export const EPIsVencidas = ({ epis, funcionarios, onUpdateCA }: EPIsVencidasProps) => {
+export const EPIsVencidas = ({ epis, funcionarios, atribuicoes, onUpdateCA }: EPIsVencidasProps) => {
   
   const getExpiredEPIs = () => {
     return epis
@@ -38,10 +39,15 @@ export const EPIsVencidas = ({ epis, funcionarios, onUpdateCA }: EPIsVencidasPro
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
-  const getFuncionarioNome = (funcionarioId?: string) => {
-    if (!funcionarioId) return "Não atribuído";
-    const funcionario = funcionarios.find(f => f.id === funcionarioId);
-    return funcionario?.nome || "Desconhecido";
+  const getFuncionariosComEPI = (epiId: string) => {
+    const funcionariosIds = atribuicoes
+      .filter(at => at.epiId === epiId)
+      .map(at => at.funcionarioId);
+    
+    return funcionariosIds
+      .map(id => funcionarios.find(f => f.id === id)?.nome)
+      .filter(Boolean)
+      .join(", ") || "Não atribuído";
   };
 
   const expiredEPIs = getExpiredEPIs();
@@ -73,7 +79,7 @@ export const EPIsVencidas = ({ epis, funcionarios, onUpdateCA }: EPIsVencidasPro
                   <TableHead>Validade</TableHead>
                   <TableHead>Dias Vencida</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Funcionário</TableHead>
+                  <TableHead>Funcionários</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -90,9 +96,7 @@ export const EPIsVencidas = ({ epis, funcionarios, onUpdateCA }: EPIsVencidasPro
                     </TableCell>
                     <TableCell>{epi.tipo}</TableCell>
                     <TableCell>
-                      <Badge variant={epi.funcionarioId ? "secondary" : "outline"}>
-                        {getFuncionarioNome(epi.funcionarioId)}
-                      </Badge>
+                      {getFuncionariosComEPI(epi.id)}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

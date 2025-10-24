@@ -78,6 +78,12 @@ const Index = () => {
     toast.success("EPI desvinculado do funcionário!");
   };
 
+  const handleUpdateFuncionario = (updatedFuncionario: Funcionario) => {
+    setFuncionarios(
+      funcionarios.map(f => f.id === updatedFuncionario.id ? updatedFuncionario : f)
+    );
+  };
+
   const openUpdateModal = (epi: EPI) => {
     setSelectedEPI(epi);
     setModalOpen(true);
@@ -128,6 +134,7 @@ const Index = () => {
               onUnassignEPI={handleUnassignEPI}
               onUpdateCA={openUpdateModal}
               onDeleteEPI={handleDeleteEPI}
+              onUpdateFuncionario={handleUpdateFuncionario}
             />
           </TabsContent>
 

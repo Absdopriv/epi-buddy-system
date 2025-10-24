@@ -3,6 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { 
   Select, 
   SelectContent, 
@@ -18,7 +26,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Edit2, Trash2, Plus, AlertTriangle, Search } from "lucide-react";
+import { Edit2, Trash2, Plus, AlertTriangle, Search, User } from "lucide-react";
 import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
@@ -31,6 +39,7 @@ interface FuncionarioEPIManagerProps {
   onUnassignEPI: (atribuicaoId: string) => void;
   onUpdateCA: (epi: EPI) => void;
   onDeleteEPI: (id: string) => void;
+  onUpdateFuncionario: (funcionario: Funcionario) => void;
 }
 
 export const FuncionarioEPIManager = ({ 
@@ -40,9 +49,18 @@ export const FuncionarioEPIManager = ({
   onAssignEPI,
   onUnassignEPI,
   onUpdateCA,
-  onDeleteEPI
+  onDeleteEPI,
+  onUpdateFuncionario
 }: FuncionarioEPIManagerProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
+  const [editForm, setEditForm] = useState({
+    nome: "",
+    cpf: "",
+    cargo: "",
+    setor: ""
+  });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const getExpirationStatus = (validade: string) => {
     const days = differenceInDays(parseISO(validade), new Date());
@@ -63,6 +81,39 @@ export const FuncionarioEPIManager = ({
     if (confirm("Tem certeza que deseja excluir este EPI?")) {
       onDeleteEPI(id);
       toast.success("EPI excluído com sucesso!");
+    }
+  };
+
+  const handleEditClick = (funcionario: Funcionario) => {
+    setEditingFuncionario(funcionario);
+    setEditForm({
+      nome: funcionario.nome,
+      cpf: funcionario.cpf,
+      cargo: funcionario.cargo,
+      setor: funcionario.setor
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return numbers
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+      .replace(/(-\d{2})\d+?$/, "$1");
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingFuncionario) {
+      onUpdateFuncionario({
+        ...editingFuncionario,
+        ...editForm
+      });
+      setIsEditDialogOpen(false);
+      setEditingFuncionario(null);
+      toast.success("Funcionário atualizado com sucesso!");
     }
   };
 
@@ -112,8 +163,69 @@ export const FuncionarioEPIManager = ({
             <Card key={funcionario.id} className="animate-in fade-in duration-500">
               <CardHeader className="bg-gradient-primary">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-primary-foreground">{funcionario.nome}</CardTitle>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-primary-foreground">{funcionario.nome}</CardTitle>
+                      <Dialog open={isEditDialogOpen && editingFuncionario?.id === funcionario.id} onOpenChange={setIsEditDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleEditClick(funcionario)}
+                            className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+                          >
+                            <User className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Editar Funcionário</DialogTitle>
+                          </DialogHeader>
+                          <form onSubmit={handleEditSubmit} className="space-y-4">
+                            <div>
+                              <Label htmlFor="edit-nome">Nome Completo</Label>
+                              <Input
+                                id="edit-nome"
+                                value={editForm.nome}
+                                onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="edit-cpf">CPF</Label>
+                              <Input
+                                id="edit-cpf"
+                                value={editForm.cpf}
+                                onChange={(e) => setEditForm({ ...editForm, cpf: formatCPF(e.target.value) })}
+                                maxLength={14}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="edit-cargo">Cargo</Label>
+                              <Input
+                                id="edit-cargo"
+                                value={editForm.cargo}
+                                onChange={(e) => setEditForm({ ...editForm, cargo: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="edit-setor">Setor</Label>
+                              <Input
+                                id="edit-setor"
+                                value={editForm.setor}
+                                onChange={(e) => setEditForm({ ...editForm, setor: e.target.value })}
+                                required
+                              />
+                            </div>
+                            <Button type="submit" className="w-full">
+                              Salvar Alterações
+                            </Button>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <p className="text-sm text-primary-foreground/80 mt-1">
                       {funcionario.cargo} - {funcionario.setor}
                     </p>

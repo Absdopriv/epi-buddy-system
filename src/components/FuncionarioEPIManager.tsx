@@ -40,6 +40,7 @@ interface FuncionarioEPIManagerProps {
   onUpdateCA: (epi: EPI) => void;
   onDeleteEPI: (id: string) => void;
   onUpdateFuncionario: (funcionario: Funcionario) => void;
+  onUpdateAtribuicaoValidade: (atribuicaoId: string, validade: string) => void;
 }
 
 export const FuncionarioEPIManager = ({ 
@@ -50,7 +51,8 @@ export const FuncionarioEPIManager = ({
   onUnassignEPI,
   onUpdateCA,
   onDeleteEPI,
-  onUpdateFuncionario
+  onUpdateFuncionario,
+  onUpdateAtribuicaoValidade
 }: FuncionarioEPIManagerProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
@@ -62,6 +64,8 @@ export const FuncionarioEPIManager = ({
   });
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedEPIs, setSelectedEPIs] = useState<Record<string, string>>({});
+  const [editingAtribuicao, setEditingAtribuicao] = useState<{ atribuicaoId: string; validade: string } | null>(null);
+  const [isValidadeDialogOpen, setIsValidadeDialogOpen] = useState(false);
   
   const getExpirationStatus = (validade: string) => {
     const days = differenceInDays(parseISO(validade), new Date());
@@ -157,7 +161,7 @@ export const FuncionarioEPIManager = ({
           const funcionarioAtribuicoes = atribuicoes.filter(at => at.funcionarioId === funcionario.id);
           const funcionarioEPIs = funcionarioAtribuicoes.map(at => {
             const epi = epis.find(e => e.id === at.epiId);
-            return epi ? { ...epi, atribuicaoId: at.id } : null;
+            return epi ? { ...epi, atribuicaoId: at.id, validade: at.validade } : null;
           }).filter(Boolean) as (EPI & { atribuicaoId: string })[];
           
           return (
@@ -326,13 +330,48 @@ export const FuncionarioEPIManager = ({
                               <TableCell>{epi.tipo}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => onUpdateCA(epi)}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
+                                  <Dialog open={isValidadeDialogOpen && editingAtribuicao?.atribuicaoId === epi.atribuicaoId} onOpenChange={setIsValidadeDialogOpen}>
+                                    <DialogTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => {
+                                          setEditingAtribuicao({ atribuicaoId: epi.atribuicaoId, validade: epi.validade });
+                                          setIsValidadeDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Atualizar Data de Validade</DialogTitle>
+                                      </DialogHeader>
+                                      <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        if (editingAtribuicao) {
+                                          onUpdateAtribuicaoValidade(editingAtribuicao.atribuicaoId, editingAtribuicao.validade);
+                                          setIsValidadeDialogOpen(false);
+                                          setEditingAtribuicao(null);
+                                          toast.success("Data de validade atualizada com sucesso!");
+                                        }
+                                      }} className="space-y-4">
+                                        <div>
+                                          <Label htmlFor="validade">Data de Validade</Label>
+                                          <Input
+                                            id="validade"
+                                            type="date"
+                                            value={editingAtribuicao?.validade || ""}
+                                            onChange={(e) => setEditingAtribuicao(editingAtribuicao ? { ...editingAtribuicao, validade: e.target.value } : null)}
+                                            required
+                                          />
+                                        </div>
+                                        <Button type="submit" className="w-full">
+                                          Salvar Alterações
+                                        </Button>
+                                      </form>
+                                    </DialogContent>
+                                  </Dialog>
                                   <Button
                                     variant="outline"
                                     size="icon"

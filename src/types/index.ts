@@ -22,4 +22,5 @@ export interface EPIAtribuicao {
   epiId: string;
   funcionarioId: string;
   dataEntrega: string;
+  validade: string;
 }

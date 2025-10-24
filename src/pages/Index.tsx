@@ -63,11 +63,13 @@ const Index = () => {
   };
 
   const handleAssignEPI = (epiId: string, funcionarioId: string) => {
+    const epi = epis.find(e => e.id === epiId);
     const novaAtribuicao: EPIAtribuicao = {
       id: `${epiId}-${funcionarioId}-${Date.now()}`,
       epiId,
       funcionarioId,
-      dataEntrega: new Date().toISOString().split('T')[0]
+      dataEntrega: new Date().toISOString().split('T')[0],
+      validade: epi?.validade || new Date().toISOString().split('T')[0]
     };
     setAtribuicoes([...atribuicoes, novaAtribuicao]);
     toast.success("EPI atribuído ao funcionário!");
@@ -81,6 +83,12 @@ const Index = () => {
   const handleUpdateFuncionario = (updatedFuncionario: Funcionario) => {
     setFuncionarios(
       funcionarios.map(f => f.id === updatedFuncionario.id ? updatedFuncionario : f)
+    );
+  };
+
+  const handleUpdateAtribuicaoValidade = (atribuicaoId: string, validade: string) => {
+    setAtribuicoes(
+      atribuicoes.map(at => at.id === atribuicaoId ? { ...at, validade } : at)
     );
   };
 
@@ -135,6 +143,7 @@ const Index = () => {
               onUpdateCA={openUpdateModal}
               onDeleteEPI={handleDeleteEPI}
               onUpdateFuncionario={handleUpdateFuncionario}
+              onUpdateAtribuicaoValidade={handleUpdateAtribuicaoValidade}
             />
           </TabsContent>
 

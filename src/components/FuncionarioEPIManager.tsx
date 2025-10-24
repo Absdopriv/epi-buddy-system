@@ -61,6 +61,7 @@ export const FuncionarioEPIManager = ({
     setor: ""
   });
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedEPIs, setSelectedEPIs] = useState<Record<string, string>>({});
   
   const getExpirationStatus = (validade: string) => {
     const days = differenceInDays(parseISO(validade), new Date());
@@ -242,9 +243,12 @@ export const FuncionarioEPIManager = ({
                 {/* Atribuir novo EPI */}
                 {epis.length > 0 && (
                   <div className="mb-4 flex gap-2">
-                    <Select onValueChange={(epiId) => onAssignEPI(epiId, funcionario.id)}>
+                    <Select 
+                      value={selectedEPIs[funcionario.id] || ""} 
+                      onValueChange={(epiId) => setSelectedEPIs({ ...selectedEPIs, [funcionario.id]: epiId })}
+                    >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Atribuir EPI ao funcionário" />
+                        <SelectValue placeholder="Selecionar EPI para atribuir" />
                       </SelectTrigger>
                       <SelectContent>
                         {epis.map((epi) => (
@@ -254,7 +258,19 @@ export const FuncionarioEPIManager = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="icon">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => {
+                        const epiId = selectedEPIs[funcionario.id];
+                        if (epiId) {
+                          onAssignEPI(epiId, funcionario.id);
+                          setSelectedEPIs({ ...selectedEPIs, [funcionario.id]: "" });
+                        } else {
+                          toast.error("Selecione um EPI antes de atribuir");
+                        }
+                      }}
+                    >
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>

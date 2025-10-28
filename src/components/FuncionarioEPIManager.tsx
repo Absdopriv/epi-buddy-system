@@ -122,9 +122,21 @@ export const FuncionarioEPIManager = ({
     }
   };
 
-  const filteredFuncionarios = funcionarios.filter(funcionario =>
-    funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredFuncionarios = funcionarios.filter(funcionario => {
+    // Buscar por nome do funcionário
+    if (funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return true;
+    }
+    
+    // Buscar por CA dos EPIs atribuídos ao funcionário
+    const funcionarioAtribuicoes = atribuicoes.filter(at => at.funcionarioId === funcionario.id);
+    const funcionarioHasMatchingCA = funcionarioAtribuicoes.some(at => {
+      const epi = epis.find(e => e.id === at.epiId);
+      return epi && epi.ca.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+    
+    return funcionarioHasMatchingCA;
+  });
 
   return (
     <div className="space-y-6">
@@ -135,7 +147,7 @@ export const FuncionarioEPIManager = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Pesquisar funcionário por nome..."
+              placeholder="Pesquisar por nome do funcionário ou CA..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -153,7 +165,7 @@ export const FuncionarioEPIManager = ({
       ) : filteredFuncionarios.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
-            Nenhum funcionário encontrado com o nome "{searchTerm}"
+            Nenhum funcionário encontrado para "{searchTerm}"
           </CardContent>
         </Card>
       ) : (

@@ -26,10 +26,11 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Edit2, Trash2, Plus, AlertTriangle, Search, User } from "lucide-react";
+import { Edit2, Trash2, Plus, AlertTriangle, Search, User, FileText } from "lucide-react";
 import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
+import { generateFichaEPI } from "@/lib/pdfGenerator";
 
 interface FuncionarioEPIManagerProps {
   funcionarios: Funcionario[];
@@ -120,6 +121,25 @@ export const FuncionarioEPIManager = ({
       setEditingFuncionario(null);
       toast.success("Funcionário atualizado com sucesso!");
     }
+  };
+
+  const handleExportPDF = (funcionario: Funcionario) => {
+    const funcionarioAtribuicoes = atribuicoes.filter(at => at.funcionarioId === funcionario.id);
+    const funcionarioEPIsData = funcionarioAtribuicoes.map(at => {
+      const epi = epis.find(e => e.id === at.epiId);
+      return {
+        epi: epi!,
+        atribuicao: at
+      };
+    }).filter(item => item.epi);
+
+    if (funcionarioEPIsData.length === 0) {
+      toast.error("Funcionário não possui EPIs atribuídos");
+      return;
+    }
+
+    generateFichaEPI(funcionario, funcionarioEPIsData);
+    toast.success("PDF gerado com sucesso!");
   };
 
   const filteredFuncionarios = funcionarios.filter(funcionario => {
@@ -242,6 +262,14 @@ export const FuncionarioEPIManager = ({
                           </form>
                         </DialogContent>
                       </Dialog>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleExportPDF(funcionario)}
+                        className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+                      >
+                        <FileText className="h-4 w-4" />
+                      </Button>
                     </div>
                     <p className="text-sm text-primary-foreground/80 mt-1">
                       {funcionario.cargo} - {funcionario.setor}

@@ -144,6 +144,7 @@ const Index = () => {
               onDeleteEPI={handleDeleteEPI}
               onUpdateFuncionario={handleUpdateFuncionario}
               onUpdateAtribuicaoValidade={handleUpdateAtribuicaoValidade}
+              onDeleteFuncionario={handleDeleteFuncionario}
             />
           </TabsContent>
 

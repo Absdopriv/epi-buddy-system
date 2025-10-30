@@ -42,6 +42,7 @@ interface FuncionarioEPIManagerProps {
   onDeleteEPI: (id: string) => void;
   onUpdateFuncionario: (funcionario: Funcionario) => void;
   onUpdateAtribuicaoValidade: (atribuicaoId: string, validade: string) => void;
+  onDeleteFuncionario: (id: string) => void;
 }
 
 export const FuncionarioEPIManager = ({ 
@@ -53,7 +54,8 @@ export const FuncionarioEPIManager = ({
   onUpdateCA,
   onDeleteEPI,
   onUpdateFuncionario,
-  onUpdateAtribuicaoValidade
+  onUpdateAtribuicaoValidade,
+  onDeleteFuncionario
 }: FuncionarioEPIManagerProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
@@ -87,6 +89,13 @@ export const FuncionarioEPIManager = ({
     if (confirm("Tem certeza que deseja excluir este EPI?")) {
       onDeleteEPI(id);
       toast.success("EPI excluído com sucesso!");
+    }
+  };
+
+  const handleDeleteFuncionario = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir este funcionário?")) {
+      onDeleteFuncionario(id);
+      toast.success("Funcionário excluído com sucesso!");
     }
   };
 
@@ -269,6 +278,14 @@ export const FuncionarioEPIManager = ({
                         className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
                       >
                         <FileText className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleDeleteFuncionario(funcionario.id)}
+                        className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                     <p className="text-sm text-primary-foreground/80 mt-1">

@@ -2,6 +2,7 @@ import { HardHat, Moon, Sun, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { SupportFAQ } from "@/components/SupportFAQ";
 
 export const Navbar = () => {
   const [isDark, setIsDark] = useState(false);
@@ -33,6 +34,7 @@ export const Navbar = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <SupportFAQ />
             <Link to="/auth">
               <Button
                 variant="outline"

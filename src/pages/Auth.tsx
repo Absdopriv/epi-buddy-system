@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { SupportDialog } from "@/components/SupportDialog";
 import { 
   ShieldAlert, 
   Mail, 
@@ -72,6 +73,10 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <SupportDialog />
+      </div>
+      
       <div className="w-full max-w-6xl">
         <Card className="overflow-hidden bg-background/95 backdrop-blur-sm shadow-2xl border-0">
           <div className="grid lg:grid-cols-2 min-h-[600px]">

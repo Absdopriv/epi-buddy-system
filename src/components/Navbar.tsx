@@ -1,4 +1,4 @@
-import { HardHat, Moon, Sun, LogIn } from "lucide-react";
+import { HardHat, Moon, Sun, LogIn, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -35,6 +35,16 @@ export const Navbar = () => {
           </div>
           <div className="flex items-center gap-2">
             <SupportFAQ />
+            <a href="https://grupo11projeto.sistemaeditoracapro.com.br/" target="_blank" rel="noopener noreferrer">
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Site</span>
+              </Button>
+            </a>
             <Link to="/auth">
               <Button
                 variant="outline"

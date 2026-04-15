@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EPIForm } from "@/components/EPIForm";
@@ -6,100 +6,166 @@ import { FuncionarioForm } from "@/components/FuncionarioForm";
 import { FuncionarioEPIManager } from "@/components/FuncionarioEPIManager";
 import { EPIsVencidas } from "@/components/EPIsVencidas";
 import { UpdateCAModal } from "@/components/UpdateCAModal";
+import { ViewEPIModal } from "@/components/ViewEPIModal";
+import { EditEPIModal } from "@/components/EditEPIModal";
 import { HardHat, User, Users, AlertTriangle } from "lucide-react";
 import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
+  const { user } = useAuth();
   const [epis, setEpis] = useState<EPI[]>([]);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [atribuicoes, setAtribuicoes] = useState<EPIAtribuicao[]>([]);
   const [selectedEPI, setSelectedEPI] = useState<EPI | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [viewEPI, setViewEPI] = useState<EPI | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editEPI, setEditEPI] = useState<EPI | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [empresaNome, setEmpresaNome] = useState("Sua Empresa");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const savedEpis = localStorage.getItem("epis");
-    const savedFuncionarios = localStorage.getItem("funcionarios");
-    const savedAtribuicoes = localStorage.getItem("atribuicoes");
-    if (savedEpis) setEpis(JSON.parse(savedEpis));
-    if (savedFuncionarios) setFuncionarios(JSON.parse(savedFuncionarios));
-    if (savedAtribuicoes) setAtribuicoes(JSON.parse(savedAtribuicoes));
-  }, []);
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
 
-  useEffect(() => {
-    localStorage.setItem("epis", JSON.stringify(epis));
-  }, [epis]);
+    const [episRes, funcRes, atribRes, profileRes] = await Promise.all([
+      supabase.from("epis").select("*").order("created_at", { ascending: false }),
+      supabase.from("funcionarios").select("*").order("created_at", { ascending: false }),
+      supabase.from("epi_atribuicoes").select("*"),
+      supabase.from("profiles").select("razao_social").eq("user_id", user.id).single(),
+    ]);
 
-  useEffect(() => {
-    localStorage.setItem("funcionarios", JSON.stringify(funcionarios));
-  }, [funcionarios]);
+    if (episRes.data) {
+      setEpis(episRes.data.map(e => ({
+        id: e.id, nome: e.nome, ca: e.ca, validade: e.validade,
+        tipo: e.tipo, uso: e.uso, fabricante: e.fabricante, entrega: e.entrega,
+      })));
+    }
+    if (funcRes.data) {
+      setFuncionarios(funcRes.data.map(f => ({
+        id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo, setor: f.setor,
+      })));
+    }
+    if (atribRes.data) {
+      setAtribuicoes(atribRes.data.map(a => ({
+        id: a.id, epiId: a.epi_id, funcionarioId: a.funcionario_id,
+        dataEntrega: a.data_entrega, validade: a.validade,
+      })));
+    }
+    if (profileRes.data?.razao_social) {
+      setEmpresaNome(profileRes.data.razao_social);
+    }
+    setLoading(false);
+  }, [user]);
 
-  useEffect(() => {
-    localStorage.setItem("atribuicoes", JSON.stringify(atribuicoes));
-  }, [atribuicoes]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleAddEPI = (epi: EPI) => {
-    setEpis([...epis, epi]);
+  const handleAddEPI = async (epi: EPI) => {
+    if (!user) return;
+    const { data, error } = await supabase.from("epis").insert({
+      user_id: user.id, nome: epi.nome, ca: epi.ca, validade: epi.validade,
+      tipo: epi.tipo, uso: epi.uso, fabricante: epi.fabricante, entrega: epi.entrega,
+    }).select().single();
+    if (error) { toast.error("Erro ao cadastrar EPI"); return; }
+    setEpis(prev => [{ id: data.id, nome: data.nome, ca: data.ca, validade: data.validade, tipo: data.tipo, uso: data.uso, fabricante: data.fabricante, entrega: data.entrega }, ...prev]);
   };
 
-  const handleDeleteEPI = (id: string) => {
-    setEpis(epis.filter((epi) => epi.id !== id));
+  const handleDeleteEPI = async (id: string) => {
+    const { error } = await supabase.from("epis").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir EPI"); return; }
+    setEpis(prev => prev.filter(e => e.id !== id));
   };
 
-  const handleUpdateCA = (id: string, ca: string, validade: string) => {
-    setEpis(
-      epis.map((epi) =>
-        epi.id === id ? { ...epi, ca, validade } : epi
-      )
-    );
+  const handleUpdateCA = async (id: string, ca: string, validade: string) => {
+    const { error } = await supabase.from("epis").update({ ca, validade }).eq("id", id);
+    if (error) { toast.error("Erro ao atualizar CA"); return; }
+    setEpis(prev => prev.map(e => e.id === id ? { ...e, ca, validade } : e));
   };
 
-  const handleAddFuncionario = (funcionario: Funcionario) => {
-    setFuncionarios([...funcionarios, funcionario]);
+  const handleUpdateEPI = async (updatedEPI: EPI) => {
+    const { error } = await supabase.from("epis").update({
+      nome: updatedEPI.nome, ca: updatedEPI.ca, validade: updatedEPI.validade,
+      tipo: updatedEPI.tipo, uso: updatedEPI.uso, fabricante: updatedEPI.fabricante, entrega: updatedEPI.entrega,
+    }).eq("id", updatedEPI.id);
+    if (error) { toast.error("Erro ao atualizar EPI"); return; }
+    setEpis(prev => prev.map(e => e.id === updatedEPI.id ? updatedEPI : e));
   };
 
-  const handleDeleteFuncionario = (id: string) => {
-    setFuncionarios(funcionarios.filter((func) => func.id !== id));
+  const handleAddFuncionario = async (funcionario: Funcionario) => {
+    if (!user) return;
+    const { data, error } = await supabase.from("funcionarios").insert({
+      user_id: user.id, nome: funcionario.nome, cpf: funcionario.cpf,
+      cargo: funcionario.cargo, setor: funcionario.setor,
+    }).select().single();
+    if (error) { toast.error("Erro ao cadastrar funcionário"); return; }
+    setFuncionarios(prev => [{ id: data.id, nome: data.nome, cpf: data.cpf, cargo: data.cargo, setor: data.setor }, ...prev]);
   };
 
-  const handleAssignEPI = (epiId: string, funcionarioId: string) => {
+  const handleDeleteFuncionario = async (id: string) => {
+    const { error } = await supabase.from("funcionarios").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir funcionário"); return; }
+    setFuncionarios(prev => prev.filter(f => f.id !== id));
+    setAtribuicoes(prev => prev.filter(a => a.funcionarioId !== id));
+  };
+
+  const handleAssignEPI = async (epiId: string, funcionarioId: string) => {
+    if (!user) return;
     const epi = epis.find(e => e.id === epiId);
-    const novaAtribuicao: EPIAtribuicao = {
-      id: `${epiId}-${funcionarioId}-${Date.now()}`,
-      epiId,
-      funcionarioId,
-      dataEntrega: new Date().toISOString().split('T')[0],
-      validade: epi?.validade || new Date().toISOString().split('T')[0]
-    };
-    setAtribuicoes([...atribuicoes, novaAtribuicao]);
+    const { data, error } = await supabase.from("epi_atribuicoes").insert({
+      user_id: user.id, epi_id: epiId, funcionario_id: funcionarioId,
+      data_entrega: new Date().toISOString().split('T')[0],
+      validade: epi?.validade || new Date().toISOString().split('T')[0],
+    }).select().single();
+    if (error) { toast.error("Erro ao atribuir EPI"); return; }
+    setAtribuicoes(prev => [...prev, {
+      id: data.id, epiId: data.epi_id, funcionarioId: data.funcionario_id,
+      dataEntrega: data.data_entrega, validade: data.validade,
+    }]);
     toast.success("EPI atribuído ao funcionário!");
   };
 
-  const handleUnassignEPI = (atribuicaoId: string) => {
-    setAtribuicoes(atribuicoes.filter(at => at.id !== atribuicaoId));
+  const handleUnassignEPI = async (atribuicaoId: string) => {
+    const { error } = await supabase.from("epi_atribuicoes").delete().eq("id", atribuicaoId);
+    if (error) { toast.error("Erro ao desvincular EPI"); return; }
+    setAtribuicoes(prev => prev.filter(a => a.id !== atribuicaoId));
     toast.success("EPI desvinculado do funcionário!");
   };
 
-  const handleUpdateFuncionario = (updatedFuncionario: Funcionario) => {
-    setFuncionarios(
-      funcionarios.map(f => f.id === updatedFuncionario.id ? updatedFuncionario : f)
-    );
+  const handleUpdateFuncionario = async (updatedFuncionario: Funcionario) => {
+    const { error } = await supabase.from("funcionarios").update({
+      nome: updatedFuncionario.nome, cpf: updatedFuncionario.cpf,
+      cargo: updatedFuncionario.cargo, setor: updatedFuncionario.setor,
+    }).eq("id", updatedFuncionario.id);
+    if (error) { toast.error("Erro ao atualizar funcionário"); return; }
+    setFuncionarios(prev => prev.map(f => f.id === updatedFuncionario.id ? updatedFuncionario : f));
   };
 
-  const handleUpdateAtribuicaoValidade = (atribuicaoId: string, validade: string) => {
-    setAtribuicoes(
-      atribuicoes.map(at => at.id === atribuicaoId ? { ...at, validade } : at)
-    );
+  const handleUpdateAtribuicaoValidade = async (atribuicaoId: string, validade: string) => {
+    const { error } = await supabase.from("epi_atribuicoes").update({ validade }).eq("id", atribuicaoId);
+    if (error) { toast.error("Erro ao atualizar validade"); return; }
+    setAtribuicoes(prev => prev.map(a => a.id === atribuicaoId ? { ...a, validade } : a));
   };
 
-  const openUpdateModal = (epi: EPI) => {
-    setSelectedEPI(epi);
-    setModalOpen(true);
-  };
+  const openUpdateModal = (epi: EPI) => { setSelectedEPI(epi); setModalOpen(true); };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar empresaNome={empresaNome} />
+        <main className="container mx-auto px-4 pt-24 pb-8 flex justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Navbar empresaNome={empresaNome} />
       <main className="container mx-auto px-4 pt-24 pb-8">
         <Tabs defaultValue="gerenciar" className="space-y-6">
           <TabsList className="grid grid-cols-2 lg:grid-cols-4 w-full">
@@ -128,43 +194,30 @@ const Index = () => {
           <TabsContent value="epi">
             <EPIForm onAdd={handleAddEPI} />
           </TabsContent>
-
           <TabsContent value="funcionario">
             <FuncionarioForm onAdd={handleAddFuncionario} />
           </TabsContent>
-
           <TabsContent value="gerenciar">
             <FuncionarioEPIManager
-              funcionarios={funcionarios}
-              epis={epis}
-              atribuicoes={atribuicoes}
-              onAssignEPI={handleAssignEPI}
-              onUnassignEPI={handleUnassignEPI}
-              onUpdateCA={openUpdateModal}
-              onDeleteEPI={handleDeleteEPI}
+              funcionarios={funcionarios} epis={epis} atribuicoes={atribuicoes}
+              onAssignEPI={handleAssignEPI} onUnassignEPI={handleUnassignEPI}
+              onUpdateCA={openUpdateModal} onDeleteEPI={handleDeleteEPI}
               onUpdateFuncionario={handleUpdateFuncionario}
               onUpdateAtribuicaoValidade={handleUpdateAtribuicaoValidade}
               onDeleteFuncionario={handleDeleteFuncionario}
+              onViewEPI={(epi) => { setViewEPI(epi); setViewModalOpen(true); }}
+              onEditEPI={(epi) => { setEditEPI(epi); setEditModalOpen(true); }}
             />
           </TabsContent>
-
           <TabsContent value="vencidas">
-            <EPIsVencidas
-              epis={epis}
-              funcionarios={funcionarios}
-              atribuicoes={atribuicoes}
-              onUpdateCA={openUpdateModal}
-            />
+            <EPIsVencidas epis={epis} funcionarios={funcionarios} atribuicoes={atribuicoes} onUpdateCA={openUpdateModal} />
           </TabsContent>
         </Tabs>
       </main>
 
-      <UpdateCAModal
-        epi={selectedEPI}
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onUpdate={handleUpdateCA}
-      />
+      <UpdateCAModal epi={selectedEPI} open={modalOpen} onClose={() => setModalOpen(false)} onUpdate={handleUpdateCA} />
+      <ViewEPIModal epi={viewEPI} open={viewModalOpen} onClose={() => setViewModalOpen(false)} />
+      <EditEPIModal epi={editEPI} open={editModalOpen} onClose={() => setEditModalOpen(false)} onUpdate={handleUpdateEPI} />
     </div>
   );
 };

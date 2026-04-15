@@ -14,6 +14,168 @@ export type Database = {
   }
   public: {
     Tables: {
+      epi_atribuicoes: {
+        Row: {
+          created_at: string
+          data_entrega: string
+          epi_id: string
+          funcionario_id: string
+          id: string
+          user_id: string
+          validade: string
+        }
+        Insert: {
+          created_at?: string
+          data_entrega?: string
+          epi_id: string
+          funcionario_id: string
+          id?: string
+          user_id: string
+          validade: string
+        }
+        Update: {
+          created_at?: string
+          data_entrega?: string
+          epi_id?: string
+          funcionario_id?: string
+          id?: string
+          user_id?: string
+          validade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epi_atribuicoes_epi_id_fkey"
+            columns: ["epi_id"]
+            isOneToOne: false
+            referencedRelation: "epis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epi_atribuicoes_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      epis: {
+        Row: {
+          ca: string
+          created_at: string
+          entrega: string
+          fabricante: string
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          uso: string
+          validade: string
+        }
+        Insert: {
+          ca: string
+          created_at?: string
+          entrega?: string
+          fabricante?: string
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+          uso?: string
+          validade: string
+        }
+        Update: {
+          ca?: string
+          created_at?: string
+          entrega?: string
+          fabricante?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          uso?: string
+          validade?: string
+        }
+        Relationships: []
+      }
+      funcionarios: {
+        Row: {
+          cargo: string
+          cpf: string
+          created_at: string
+          id: string
+          nome: string
+          setor: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cargo: string
+          cpf: string
+          created_at?: string
+          id?: string
+          nome: string
+          setor: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cargo?: string
+          cpf?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          setor?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          data_fundacao: string | null
+          endereco: string | null
+          id: string
+          ramo_atividade: string | null
+          razao_social: string | null
+          responsavel: string | null
+          telefone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          data_fundacao?: string | null
+          endereco?: string | null
+          id?: string
+          ramo_atividade?: string | null
+          razao_social?: string | null
+          responsavel?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          data_fundacao?: string | null
+          endereco?: string | null
+          id?: string
+          ramo_atividade?: string | null
+          razao_social?: string | null
+          responsavel?: string | null
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           created_at: string | null

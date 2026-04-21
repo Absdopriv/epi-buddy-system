@@ -101,6 +101,66 @@ export type Database = {
         }
         Relationships: []
       }
+      formularios_seguranca: {
+        Row: {
+          atividades: string[]
+          created_at: string
+          email: string
+          empresa: string
+          epis_sugeridos: string[]
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          local: string
+          medidas_controle: string[]
+          nome: string
+          outras_atividades: string | null
+          ptp: string
+          riscos: string[]
+          setor: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          atividades?: string[]
+          created_at?: string
+          email: string
+          empresa: string
+          epis_sugeridos?: string[]
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          local: string
+          medidas_controle?: string[]
+          nome: string
+          outras_atividades?: string | null
+          ptp: string
+          riscos?: string[]
+          setor: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          atividades?: string[]
+          created_at?: string
+          email?: string
+          empresa?: string
+          epis_sugeridos?: string[]
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          local?: string
+          medidas_controle?: string[]
+          nome?: string
+          outras_atividades?: string | null
+          ptp?: string
+          riscos?: string[]
+          setor?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       funcionarios: {
         Row: {
           cargo: string

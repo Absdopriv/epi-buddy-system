@@ -1,4 +1,4 @@
-import { HardHat, Moon, Sun, LogIn, LogOut, ExternalLink } from "lucide-react";
+import { HardHat, Moon, Sun, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -46,12 +46,6 @@ export const Navbar = ({ empresaNome }: NavbarProps) => {
           </div>
           <div className="flex items-center gap-2">
             <SupportFAQ />
-            <a href="https://grupo11projeto.sistemaeditoracapro.com.br/" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Site</span>
-              </Button>
-            </a>
             {user ? (
               <Button variant="outline" size="sm" onClick={handleSignOut}
                 className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20">

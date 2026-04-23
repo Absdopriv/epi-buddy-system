@@ -352,9 +352,27 @@ const Seguranca = () => {
                     </div>
                   </section>
 
+                  {/* Etapa 3: Assinaturas */}
+                  <section>
+                    <h3 className="text-lg font-semibold text-primary mb-4 pb-2 border-b-2 border-primary inline-flex items-center gap-2">
+                      <PenLine className="h-5 w-5" /> Etapa 3: Assinaturas
+                    </h3>
+                    <div className="space-y-4">
+                      <Field label="Assinatura do Responsável da Equipe de Trabalho" id="ass_equipe"
+                        value={form.assinatura_responsavel_equipe}
+                        onChange={v => setForm({ ...form, assinatura_responsavel_equipe: v })} required />
+                      <Field label="Assinatura do Responsável do Site" id="ass_site"
+                        value={form.assinatura_responsavel_site}
+                        onChange={v => setForm({ ...form, assinatura_responsavel_site: v })} required />
+                      <Field label="Assinatura do Técnico de Segurança" id="ass_tecnico"
+                        value={form.assinatura_tecnico_seguranca}
+                        onChange={v => setForm({ ...form, assinatura_tecnico_seguranca: v })} required />
+                    </div>
+                  </section>
+
                   <Button type="submit" className="w-full" size="lg" disabled={saving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? "Salvando..." : "Registrar Formulário"}
+                    <Send className="h-4 w-4 mr-2" />
+                    {saving ? "Enviando..." : "Enviar Formulário"}
                   </Button>
                 </div>
 

@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ATIVIDADES, calcularRiscos, cruzarComEpisCadastrados } from "@/lib/seguranca-data";
+import { PenLine, Send } from "lucide-react";
 
 interface FormularioRow {
   id: string;
@@ -33,12 +34,18 @@ interface FormularioRow {
   riscos: string[];
   epis_sugeridos: string[];
   medidas_controle: string[];
+  assinatura_responsavel_equipe?: string | null;
+  assinatura_responsavel_site?: string | null;
+  assinatura_tecnico_seguranca?: string | null;
   created_at: string;
 }
 
 const initialForm = {
   nome: "", setor: "", empresa: "", email: "", ptp: "",
   local: "", hora_inicio: "", hora_fim: "", outras_atividades: "",
+  assinatura_responsavel_equipe: "",
+  assinatura_responsavel_site: "",
+  assinatura_tecnico_seguranca: "",
 };
 
 type View = "dashboard" | "novo" | "lista";
@@ -345,9 +352,27 @@ const Seguranca = () => {
                     </div>
                   </section>
 
+                  {/* Etapa 3: Assinaturas */}
+                  <section>
+                    <h3 className="text-lg font-semibold text-primary mb-4 pb-2 border-b-2 border-primary inline-flex items-center gap-2">
+                      <PenLine className="h-5 w-5" /> Etapa 3: Assinaturas
+                    </h3>
+                    <div className="space-y-4">
+                      <Field label="Assinatura do Responsável da Equipe de Trabalho" id="ass_equipe"
+                        value={form.assinatura_responsavel_equipe}
+                        onChange={v => setForm({ ...form, assinatura_responsavel_equipe: v })} required />
+                      <Field label="Assinatura do Responsável do Site" id="ass_site"
+                        value={form.assinatura_responsavel_site}
+                        onChange={v => setForm({ ...form, assinatura_responsavel_site: v })} required />
+                      <Field label="Assinatura do Técnico de Segurança" id="ass_tecnico"
+                        value={form.assinatura_tecnico_seguranca}
+                        onChange={v => setForm({ ...form, assinatura_tecnico_seguranca: v })} required />
+                    </div>
+                  </section>
+
                   <Button type="submit" className="w-full" size="lg" disabled={saving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? "Salvando..." : "Registrar Formulário"}
+                    <Send className="h-4 w-4 mr-2" />
+                    {saving ? "Enviando..." : "Enviar Formulário"}
                   </Button>
                 </div>
 

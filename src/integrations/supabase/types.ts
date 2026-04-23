@@ -103,6 +103,9 @@ export type Database = {
       }
       formularios_seguranca: {
         Row: {
+          assinatura_responsavel_equipe: string | null
+          assinatura_responsavel_site: string | null
+          assinatura_tecnico_seguranca: string | null
           atividades: string[]
           created_at: string
           email: string
@@ -122,6 +125,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assinatura_responsavel_equipe?: string | null
+          assinatura_responsavel_site?: string | null
+          assinatura_tecnico_seguranca?: string | null
           atividades?: string[]
           created_at?: string
           email: string
@@ -141,6 +147,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assinatura_responsavel_equipe?: string | null
+          assinatura_responsavel_site?: string | null
+          assinatura_tecnico_seguranca?: string | null
           atividades?: string[]
           created_at?: string
           email?: string

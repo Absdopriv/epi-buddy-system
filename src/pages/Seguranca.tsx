@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ATIVIDADES, calcularRiscos, cruzarComEpisCadastrados } from "@/lib/seguranca-data";
+import { PenLine, Send } from "lucide-react";
 
 interface FormularioRow {
   id: string;
@@ -33,12 +34,18 @@ interface FormularioRow {
   riscos: string[];
   epis_sugeridos: string[];
   medidas_controle: string[];
+  assinatura_responsavel_equipe?: string | null;
+  assinatura_responsavel_site?: string | null;
+  assinatura_tecnico_seguranca?: string | null;
   created_at: string;
 }
 
 const initialForm = {
   nome: "", setor: "", empresa: "", email: "", ptp: "",
   local: "", hora_inicio: "", hora_fim: "", outras_atividades: "",
+  assinatura_responsavel_equipe: "",
+  assinatura_responsavel_site: "",
+  assinatura_tecnico_seguranca: "",
 };
 
 type View = "dashboard" | "novo" | "lista";

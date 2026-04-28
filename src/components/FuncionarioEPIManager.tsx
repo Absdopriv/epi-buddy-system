@@ -18,6 +18,7 @@ import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
 import { generateFichaEPI } from "@/lib/pdfGenerator";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FuncionarioEPIManagerProps {
   funcionarios: Funcionario[];

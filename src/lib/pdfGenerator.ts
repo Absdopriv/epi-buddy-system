@@ -4,9 +4,15 @@ import { Funcionario, EPI, EPIAtribuicao } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+interface EmpresaInfo {
+  razao_social?: string | null;
+  cnpj?: string | null;
+}
+
 export const generateFichaEPI = (
   funcionario: Funcionario,
-  funcionarioEPIs: Array<{ epi: EPI; atribuicao: EPIAtribuicao }>
+  funcionarioEPIs: Array<{ epi: EPI; atribuicao: EPIAtribuicao }>,
+  empresa?: EmpresaInfo
 ) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -16,11 +22,13 @@ export const generateFichaEPI = (
   doc.setFont('helvetica', 'bold');
   doc.text("CONTROLE DE ENTREGA DE EPI's", pageWidth / 2, 20, { align: 'center' });
 
-  // Informações da empresa (você pode personalizar)
+  // Informações da empresa (vindas do cadastro)
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('CASA CARNEIRO E SABOYA ENGENHARIA E ARQUITETURA LTDA', pageWidth / 2, 28, { align: 'center' });
-  doc.text('CNPJ: 18.119.973.0001-00', pageWidth / 2, 33, { align: 'center' });
+  const razaoSocial = empresa?.razao_social?.trim() || 'Empresa não cadastrada';
+  const cnpj = empresa?.cnpj?.trim() || 'CNPJ não cadastrado';
+  doc.text(razaoSocial.toUpperCase(), pageWidth / 2, 28, { align: 'center' });
+  doc.text(`CNPJ: ${cnpj}`, pageWidth / 2, 33, { align: 'center' });
 
   // Informações do funcionário
   doc.setFontSize(10);

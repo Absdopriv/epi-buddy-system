@@ -18,6 +18,7 @@ import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { differenceInDays, parseISO } from "date-fns";
 import { generateFichaEPI } from "@/lib/pdfGenerator";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FuncionarioEPIManagerProps {
   funcionarios: Funcionario[];
@@ -93,14 +94,26 @@ export const FuncionarioEPIManager = ({
     }
   };
 
-  const handleExportPDF = (funcionario: Funcionario) => {
+  const handleExportPDF = async (funcionario: Funcionario) => {
     const funcionarioAtribuicoes = atribuicoes.filter(at => at.funcionarioId === funcionario.id);
     const funcionarioEPIsData = funcionarioAtribuicoes.map(at => {
       const epi = epis.find(e => e.id === at.epiId);
       return { epi: epi!, atribuicao: at };
     }).filter(item => item.epi);
     if (funcionarioEPIsData.length === 0) { toast.error("Funcionário não possui EPIs atribuídos"); return; }
-    generateFichaEPI(funcionario, funcionarioEPIsData);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    let empresa: { razao_social?: string | null; cnpj?: string | null } | undefined;
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("razao_social, cnpj")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (profile) empresa = profile;
+    }
+
+    generateFichaEPI(funcionario, funcionarioEPIsData, empresa);
     toast.success("PDF gerado com sucesso!");
   };
 

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HardHat, ShieldAlert, ArrowRight, CheckCircle2, FileText, ClipboardList, BadgeCheck } from "lucide-react";
+import { HardHat, ShieldAlert, ArrowRight, CheckCircle2, FileText, ClipboardList, BadgeCheck, Stethoscope, Bell, Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,7 +28,7 @@ const ModuleSelection = () => {
             <p className="text-muted-foreground text-lg">Escolha o módulo que deseja acessar</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             {/* Módulo EPIs */}
             <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
               onClick={() => navigate("/epis")}>
@@ -76,6 +76,37 @@ const ModuleSelection = () => {
                   { icon: FileText, label: "Formulários digitais" },
                   { icon: ClipboardList, label: "Relatórios detalhados" },
                   { icon: BadgeCheck, label: "Conformidade com NRs" },
+                ].map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Icon className="h-4 w-4 text-primary" /><span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              <Button className="w-full group-hover:gap-3 transition-all">
+                Acessar Módulo <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Card>
+
+            {/* Módulo Exame Admissional */}
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+              onClick={() => navigate("/exame-admissional")}>
+              <div className="flex items-start gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
+                  <Stethoscope className="h-8 w-8" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-foreground mb-1">Exame Admissional</h2>
+                  <p className="text-sm text-muted-foreground">ASO, riscos por cargo e alertas</p>
+                </div>
+              </div>
+              <p className="text-foreground/80 mb-6">
+                Cadastre cargos, riscos e exames. Gere ASO automaticamente e receba alertas de vencimento.
+              </p>
+              <div className="space-y-2 mb-6 flex-1">
+                {[
+                  { icon: Activity, label: "Exames por funcionário" },
+                  { icon: FileText, label: "Emissão automática de ASO" },
+                  { icon: Bell, label: "Alertas de vencimento" },
                 ].map(({ icon: Icon, label }) => (
                   <div key={label} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Icon className="h-4 w-4 text-primary" /><span>{label}</span>

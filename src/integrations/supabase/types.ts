@@ -14,6 +14,225 @@ export type Database = {
   }
   public: {
     Tables: {
+      alertas: {
+        Row: {
+          created_at: string
+          data_vencimento: string | null
+          dias_para_vencer: number | null
+          exame_funcionario_id: string | null
+          exame_ocupacional_id: string | null
+          funcionario_id: string | null
+          id: string
+          mensagem: string | null
+          nivel: string
+          resolvido: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_vencimento?: string | null
+          dias_para_vencer?: number | null
+          exame_funcionario_id?: string | null
+          exame_ocupacional_id?: string | null
+          funcionario_id?: string | null
+          id?: string
+          mensagem?: string | null
+          nivel?: string
+          resolvido?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_vencimento?: string | null
+          dias_para_vencer?: number | null
+          exame_funcionario_id?: string | null
+          exame_ocupacional_id?: string | null
+          funcionario_id?: string | null
+          id?: string
+          mensagem?: string | null
+          nivel?: string
+          resolvido?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_exame_funcionario_id_fkey"
+            columns: ["exame_funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "exames_funcionario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_exame_ocupacional_id_fkey"
+            columns: ["exame_ocupacional_id"]
+            isOneToOne: false
+            referencedRelation: "exames_ocupacionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asos: {
+        Row: {
+          aptidao: string
+          created_at: string
+          crm_medico: string | null
+          data_emissao: string
+          funcionario_id: string
+          id: string
+          medico_responsavel: string | null
+          proximo_aso: string | null
+          restricoes: string | null
+          tipo_exame: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          aptidao?: string
+          created_at?: string
+          crm_medico?: string | null
+          data_emissao?: string
+          funcionario_id: string
+          id?: string
+          medico_responsavel?: string | null
+          proximo_aso?: string | null
+          restricoes?: string | null
+          tipo_exame?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          aptidao?: string
+          created_at?: string
+          crm_medico?: string | null
+          data_emissao?: string
+          funcionario_id?: string
+          id?: string
+          medico_responsavel?: string | null
+          proximo_aso?: string | null
+          restricoes?: string | null
+          tipo_exame?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asos_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auditoria: {
+        Row: {
+          acao: string
+          created_at: string
+          dados_antes: Json | null
+          dados_depois: Json | null
+          id: string
+          registro_id: string | null
+          tabela: string
+          user_id: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          dados_antes?: Json | null
+          dados_depois?: Json | null
+          id?: string
+          registro_id?: string | null
+          tabela: string
+          user_id: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          dados_antes?: Json | null
+          dados_depois?: Json | null
+          id?: string
+          registro_id?: string | null
+          tabela?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cargo_riscos: {
+        Row: {
+          cargo_id: string
+          created_at: string
+          id: string
+          risco_id: string
+          user_id: string
+        }
+        Insert: {
+          cargo_id: string
+          created_at?: string
+          id?: string
+          risco_id: string
+          user_id: string
+        }
+        Update: {
+          cargo_id?: string
+          created_at?: string
+          id?: string
+          risco_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargo_riscos_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargo_riscos_risco_id_fkey"
+            columns: ["risco_id"]
+            isOneToOne: false
+            referencedRelation: "riscos_ocupacionais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cargos: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       epi_atribuicoes: {
         Row: {
           created_at: string
@@ -101,6 +320,102 @@ export type Database = {
         }
         Relationships: []
       }
+      exames_funcionario: {
+        Row: {
+          created_at: string
+          crm_medico: string | null
+          data_realizacao: string | null
+          data_vencimento: string | null
+          exame_id: string
+          funcionario_id: string
+          id: string
+          medico_responsavel: string | null
+          observacoes: string | null
+          resultado: string | null
+          situacao: string
+          tipo_exame: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          crm_medico?: string | null
+          data_realizacao?: string | null
+          data_vencimento?: string | null
+          exame_id: string
+          funcionario_id: string
+          id?: string
+          medico_responsavel?: string | null
+          observacoes?: string | null
+          resultado?: string | null
+          situacao?: string
+          tipo_exame?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          crm_medico?: string | null
+          data_realizacao?: string | null
+          data_vencimento?: string | null
+          exame_id?: string
+          funcionario_id?: string
+          id?: string
+          medico_responsavel?: string | null
+          observacoes?: string | null
+          resultado?: string | null
+          situacao?: string
+          tipo_exame?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exames_funcionario_exame_id_fkey"
+            columns: ["exame_id"]
+            isOneToOne: false
+            referencedRelation: "exames_ocupacionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exames_funcionario_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exames_ocupacionais: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          periodicidade_meses: number
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          periodicidade_meses?: number
+          tipo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          periodicidade_meses?: number
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       formularios_seguranca: {
         Row: {
           assinatura_responsavel_equipe: string | null
@@ -173,8 +488,10 @@ export type Database = {
       funcionarios: {
         Row: {
           cargo: string
+          cargo_id: string | null
           cpf: string
           created_at: string
+          data_admissao: string | null
           id: string
           nome: string
           setor: string
@@ -183,8 +500,10 @@ export type Database = {
         }
         Insert: {
           cargo: string
+          cargo_id?: string | null
           cpf: string
           created_at?: string
+          data_admissao?: string | null
           id?: string
           nome: string
           setor: string
@@ -193,15 +512,25 @@ export type Database = {
         }
         Update: {
           cargo?: string
+          cargo_id?: string | null
           cpf?: string
           created_at?: string
+          data_admissao?: string | null
           id?: string
           nome?: string
           setor?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "funcionarios_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -240,6 +569,75 @@ export type Database = {
           razao_social?: string | null
           responsavel?: string | null
           telefone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      risco_exames: {
+        Row: {
+          created_at: string
+          exame_id: string
+          id: string
+          risco_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exame_id: string
+          id?: string
+          risco_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exame_id?: string
+          id?: string
+          risco_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risco_exames_exame_id_fkey"
+            columns: ["exame_id"]
+            isOneToOne: false
+            referencedRelation: "exames_ocupacionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risco_exames_risco_id_fkey"
+            columns: ["risco_id"]
+            isOneToOne: false
+            referencedRelation: "riscos_ocupacionais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      riscos_ocupacionais: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          nivel: string
+          tipo: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          nivel?: string
+          tipo?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          nivel?: string
+          tipo?: string | null
           updated_at?: string
           user_id?: string
         }

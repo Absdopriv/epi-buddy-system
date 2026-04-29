@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ModuleSelection from "./pages/ModuleSelection";
 import Seguranca from "./pages/Seguranca";
+import ExameAdmissional from "./pages/ExameAdmissional";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><ModuleSelection /></ProtectedRoute>} />
             <Route path="/epis" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/seguranca" element={<ProtectedRoute><Seguranca /></ProtectedRoute>} />
+            <Route path="/exame-admissional" element={<ProtectedRoute><ExameAdmissional /></ProtectedRoute>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

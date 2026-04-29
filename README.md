@@ -1,73 +1,45 @@
-# Welcome to your Lovable project
+# Sistema Unificado de Gestão em Segurança do Trabalho
 
-## Project info
+## Definição do Projeto
+Este projeto consiste no desenvolvimento e integração de uma plataforma robusta para a gestão de Segurança do Trabalho. O sistema unifica três módulos anteriormente independentes — Formulários de Risco, Gestão de Projetos e Exame Admissional — em um ecossistema único, permitindo a centralização de dados e a otimização dos fluxos operacionais.
 
-**URL**: https://lovable.dev/projects/38182008-3f20-4d19-b996-0b0167eaba83
+---
 
-## How can I edit this code?
+## Escopo Técnico e Arquitetura
 
-There are several ways of editing your application.
+### 1. Sistema de Exame Admissional
+Desenvolvimento do módulo de controle de saúde ocupacional, compreendendo:
+* **Levantamento de Requisitos:** Elaboração minuciosa de Requisitos Funcionais (RFs) para garantir o atendimento às normas regulamentadoras.
+* **Modelagem de Dados e Processos:** Criação de diagramas UML (Caso de Uso, Classes e Sequência) para fundamentar a arquitetura antes da implementação.
 
-**Use Lovable**
+### 2. Migração e Modernização (Módulo de Riscos)
+Uma das etapas críticas do projeto foi a modernização do módulo de Formulários de Risco:
+* **Refatoração de Stack:** Migração completa da camada de backend de Java para Node.js, visando maior escalabilidade e padronização com o restante da stack.
+* **Persistência de Dados:** Modelagem e implementação de um novo banco de dados estruturado para suportar o volume de dados coletados.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/38182008-3f20-4d19-b996-0b0167eaba83) and start prompting.
+### 3. Interface e Integração
+* **Dashboard Unificado:** Desenvolvimento de uma interface centralizadora que gerencia o estado da aplicação após a autenticação segura do usuário.
+* **Controle de Acesso:** Implementação de fluxos de login e cadastro integrados que direcionam o usuário aos três pilares do projeto.
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## Engenharia e Qualidade de Software
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+* **Versionamento:** Gestão rigorosa de código utilizando Git, com segregação de repositórios para o ecossistema de Frontend e Backend.
+* **Documentação Técnica:** Manutenção de documentação atualizada incluindo dicionário de dados, especificações de API e guias de implantação.
+* **Padronização:** Aplicação de boas práticas de desenvolvimento para garantir a manutenibilidade do código a longo prazo.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## Stack Tecnológica
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+* **Backend:** Node.js
+* **Frontend:** Frameworks Modernos (React/Vue)
+* **Linguagens:** JavaScript / TypeScript
+* **Banco de Dados:** SQL / NoSQL
+* **Ferramentas de Engenharia:** UML, Git
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+---
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/38182008-3f20-4d19-b996-0b0167eaba83) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Conclusão
+O projeto unificado entrega uma solução de alta coesão e baixo acoplamento. A transição tecnológica para Node.js e a centralização da interface resultaram num sistema significativamente mais ágil, pronto para escala industrial e com uma curva de aprendizado reduzida para o utilizador final.

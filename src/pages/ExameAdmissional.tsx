@@ -14,7 +14,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   ArrowLeft, Stethoscope, Briefcase, AlertTriangle, ClipboardList, FileCheck2, Bell,
   Plus, Trash2, FileText, CheckCircle2, Clock, XCircle, Send, Activity,
+  LayoutDashboard, Users, CalendarClock, Printer, ShieldCheck,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -330,6 +333,106 @@ const ExameAdmissional = () => {
 
   const alertasAtivos = alertas.filter(a => !a.resolvido);
 
+  // ===== KPIs do Dashboard =====
+  type Prio = { funcionario: Funcionario; ef: ExameFunc; cat?: ExameOcup; risco?: Risco; status: "VENCIDO" | "PROXIMO" | "EM_DIA" | "PENDENTE"; dias: number | null };
+  const hoje = new Date();
+  const linhas: Prio[] = examesFunc.map(ef => {
+    const f = funcionarios.find(x => x.id === ef.funcionario_id);
+    if (!f) return null as any;
+    const cat = exames.find(x => x.id === ef.exame_id);
+    // descobrir um risco associado via cargo->risco->exame
+    const riscoIdsDoCargo = cargoRiscos.filter(cr => cr.cargo_id === f.cargo_id).map(cr => cr.risco_id);
+    const riscoMatch = riscoExames.find(re => re.exame_id === ef.exame_id && riscoIdsDoCargo.includes(re.risco_id));
+    const risco = riscoMatch ? riscos.find(r => r.id === riscoMatch.risco_id) : undefined;
+    let status: Prio["status"] = "EM_DIA"; let dias: number | null = null;
+    if (ef.situacao === "PENDENTE") status = "PENDENTE";
+    else if (ef.data_vencimento) {
+      dias = differenceInDays(new Date(ef.data_vencimento), hoje);
+      if (dias < 0) status = "VENCIDO";
+      else if (dias <= 30) status = "PROXIMO";
+      else status = "EM_DIA";
+    }
+    return { funcionario: f, ef, cat, risco, status, dias };
+  }).filter(Boolean) as Prio[];
+
+  const funcAtivos = funcionarios.length;
+  const funcSemCargo = funcionarios.filter(f => !f.cargo_id).length;
+  const funcSemAdmissao = funcionarios.filter(f => !f.data_admissao).length;
+  const pendCadastro = funcSemCargo + funcSemAdmissao;
+  const totalVencidos = linhas.filter(l => l.status === "VENCIDO").length;
+  const totalProximos = linhas.filter(l => l.status === "PROXIMO").length;
+  const totalEmDia = linhas.filter(l => l.status === "EM_DIA").length;
+  const funcionariosInaptos = new Set(linhas.filter(l => l.status === "VENCIDO").map(l => l.funcionario.id)).size;
+  const funcionariosAptos = funcAtivos - funcionariosInaptos;
+
+  // Setores agregados
+  const porSetor = funcionarios.reduce<Record<string, number>>((acc, f) => {
+    const k = (f.setor || "Sem setor").trim() || "Sem setor";
+    acc[k] = (acc[k] || 0) + 1; return acc;
+  }, {});
+
+  // Lista de prioridades: vencidos primeiro, depois próximos, depois pendentes
+  const prioridades = [...linhas].sort((a, b) => {
+    const order = { VENCIDO: 0, PROXIMO: 1, PENDENTE: 2, EM_DIA: 3 };
+    if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+    return (a.dias ?? 9999) - (b.dias ?? 9999);
+  }).slice(0, 12);
+
+  const irParaExames = (filtroSit?: string) => {
+    if (filtroSit) setFiltros({ ...filtros, situacao: filtroSit });
+    const trigger = document.querySelector('[data-tab-target="exames"]') as HTMLElement | null;
+    trigger?.click();
+  };
+
+  const exportarPCMSO = () => {
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFontSize(15); doc.setFont("helvetica", "bold");
+    doc.text("RELATÓRIO PCMSO / GRO-PGR", pageW / 2, 18, { align: "center" });
+    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.text((empresa.razao_social || "Empresa não cadastrada").toUpperCase(), pageW / 2, 25, { align: "center" });
+    doc.text(`CNPJ: ${empresa.cnpj || "—"}`, pageW / 2, 30, { align: "center" });
+    doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, pageW / 2, 35, { align: "center" });
+
+    autoTable(doc, {
+      startY: 42,
+      head: [["Indicador", "Valor"]],
+      body: [
+        ["Funcionários ativos", String(funcAtivos)],
+        ["Aptos", String(funcionariosAptos)],
+        ["Inaptos / com exames vencidos", String(funcionariosInaptos)],
+        ["Exames vencidos", String(totalVencidos)],
+        ["Exames vencendo em até 30 dias", String(totalProximos)],
+        ["Exames em dia", String(totalEmDia)],
+        ["Pendências de cadastro", String(pendCadastro)],
+      ],
+      theme: "grid", styles: { fontSize: 9 },
+      headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+    });
+
+    autoTable(doc, {
+      // @ts-ignore
+      startY: (doc as any).lastAutoTable.finalY + 8,
+      head: [["Funcionário", "Cargo", "Risco", "Exame", "Vencimento", "Status"]],
+      body: prioridades.map(l => [
+        l.funcionario.nome,
+        l.funcionario.cargo,
+        l.risco?.descricao || "—",
+        l.cat?.nome || "—",
+        l.ef.data_vencimento ? format(new Date(l.ef.data_vencimento), "dd/MM/yyyy") : "—",
+        l.status === "VENCIDO" ? `VENCIDO (${Math.abs(l.dias ?? 0)}d)` :
+        l.status === "PROXIMO" ? `PRÓXIMO VENC (${l.dias}d)` :
+        l.status === "PENDENTE" ? "PENDENTE" : "EM DIA",
+      ]),
+      theme: "grid", styles: { fontSize: 8 },
+      headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+    });
+
+    doc.save(`PCMSO_${format(new Date(), "dd-MM-yyyy")}.pdf`);
+    toast.success("Relatório PCMSO gerado");
+  };
+
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar empresaNome={empresaNome} />
@@ -349,14 +452,162 @@ const ExameAdmissional = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="exames">
-          <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1 mb-6">
-            <TabsTrigger value="exames"><Activity className="h-4 w-4 mr-1" />Exames</TabsTrigger>
+        <Tabs defaultValue="dashboard">
+          <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-1 mb-6">
+            <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
+            <TabsTrigger value="exames" data-tab-target="exames"><Activity className="h-4 w-4 mr-1" />Exames</TabsTrigger>
             <TabsTrigger value="alertas"><Bell className="h-4 w-4 mr-1" />Alertas{alertasAtivos.length > 0 && <Badge className="ml-2 h-5 px-1.5">{alertasAtivos.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="cargos"><Briefcase className="h-4 w-4 mr-1" />Cargos</TabsTrigger>
             <TabsTrigger value="riscos"><AlertTriangle className="h-4 w-4 mr-1" />Riscos</TabsTrigger>
             <TabsTrigger value="catalogo"><ClipboardList className="h-4 w-4 mr-1" />Exames Cat.</TabsTrigger>
           </TabsList>
+
+          {/* ===== DASHBOARD ===== */}
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* KPI cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button onClick={() => irParaExames("TODOS")} className="text-left">
+                <Card className="p-5 border-l-4 border-l-primary hover:shadow-md transition-shadow h-full">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-muted-foreground">Funcionários Ativos</p>
+                      <p className="text-4xl font-bold mt-1">{funcAtivos}</p>
+                    </div>
+                    <Users className="h-7 w-7 text-primary" />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {Object.entries(porSetor).slice(0, 4).map(([k, v]) => (
+                      <div key={k} className="flex justify-between"><span className="truncate">{k}</span><span className="font-bold text-foreground ml-2">{v}</span></div>
+                    ))}
+                  </div>
+                </Card>
+              </button>
+
+              <button onClick={() => irParaExames("PENDENTE")} className="text-left">
+                <Card className="p-5 border-l-4 border-l-destructive bg-destructive/5 hover:shadow-md transition-shadow h-full">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-destructive">Alertas Críticos — Exames Vencidos</p>
+                      <p className="text-4xl font-bold mt-1 text-destructive">{totalVencidos}</p>
+                    </div>
+                    <AlertTriangle className="h-7 w-7 text-destructive" />
+                  </div>
+                  <p className="mt-3 text-xs font-semibold text-destructive">Ação Imediata Necessária!</p>
+                  <p className="text-xs text-muted-foreground">{funcionariosInaptos} funcionário(s) impactado(s)</p>
+                </Card>
+              </button>
+
+              <button onClick={() => irParaExames("CONCLUIDO")} className="text-left">
+                <Card className="p-5 border-l-4 border-l-warning bg-warning/5 hover:shadow-md transition-shadow h-full">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "hsl(var(--warning))" }}>Vencimentos Próximos</p>
+                      <p className="text-4xl font-bold mt-1" style={{ color: "hsl(var(--warning))" }}>{totalProximos}</p>
+                    </div>
+                    <CalendarClock className="h-7 w-7" style={{ color: "hsl(var(--warning))" }} />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">Planejar agendamentos (próx. 30 dias)</p>
+                </Card>
+              </button>
+
+              <button onClick={() => irParaExames("TODOS")} className="text-left">
+                <Card className="p-5 border-l-4 border-l-success bg-success/5 hover:shadow-md transition-shadow h-full">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "hsl(var(--success))" }}>Pendências de Cadastro</p>
+                      <p className="text-4xl font-bold mt-1" style={{ color: "hsl(var(--success))" }}>{pendCadastro}</p>
+                    </div>
+                    <ClipboardList className="h-7 w-7" style={{ color: "hsl(var(--success))" }} />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">{funcSemCargo} sem cargo · {funcSemAdmissao} sem admissão</p>
+                </Card>
+              </button>
+            </div>
+
+            {/* Lista de prioridades */}
+            <Card className="p-0 overflow-hidden">
+              <div className="p-4 border-b bg-muted/30">
+                <h3 className="font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" />Monitoramento de Exames e Riscos — Lista de Prioridades (GRO/PGR)</h3>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Funcionário</TableHead>
+                    <TableHead>Cargo</TableHead>
+                    <TableHead>Risco Associado</TableHead>
+                    <TableHead>Exame</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {prioridades.length === 0 && (
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sem dados — cadastre cargos, riscos e funcionários.</TableCell></TableRow>
+                  )}
+                  {prioridades.map(l => {
+                    const rowClass =
+                      l.status === "VENCIDO" ? "bg-destructive/5" :
+                      l.status === "PROXIMO" ? "bg-warning/5" :
+                      l.status === "EM_DIA" ? "bg-success/5" : "";
+                    const badge =
+                      l.status === "VENCIDO" ? <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive">VENCIDO{l.dias !== null && ` (${Math.abs(l.dias)}d)`}</Badge> :
+                      l.status === "PROXIMO" ? <Badge style={{ background: "hsl(var(--warning))", color: "hsl(var(--warning-foreground))" }}>PRÓXIMO VENC</Badge> :
+                      l.status === "PENDENTE" ? <Badge variant="secondary">PENDENTE</Badge> :
+                      <Badge style={{ background: "hsl(var(--success))", color: "hsl(var(--success-foreground))" }}>EM DIA</Badge>;
+                    return (
+                      <TableRow key={l.ef.id} className={rowClass}>
+                        <TableCell className="font-medium">{l.funcionario.nome}</TableCell>
+                        <TableCell>{l.funcionario.cargo}</TableCell>
+                        <TableCell>{l.risco?.descricao || "—"}</TableCell>
+                        <TableCell>{l.cat?.nome || "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          {fmt(l.ef.data_vencimento)}
+                          {l.dias !== null && (
+                            <div className="text-xs text-muted-foreground">
+                              {l.dias < 0 ? `Vencido há ${Math.abs(l.dias)} dias` : l.dias <= 30 ? `Vence em ${l.dias} dias` : `Faltam ${l.dias} dias`}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{badge}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => abrirRegistrar(l.ef)}>
+                            {l.status === "VENCIDO" || l.status === "PENDENTE" ? "Agendar Exame" : "Ver Detalhes"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+
+            {/* Aptidão geral + ações */}
+            <div className="grid lg:grid-cols-3 gap-4">
+              <Card className="p-5 lg:col-span-2">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />Situação Geral de Aptidão na Empresa</h3>
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <span>Total: <strong>{funcAtivos}</strong> Funcionários.</span>
+                  <span>Aptos: <strong>{funcionariosAptos}</strong></span>
+                  <Badge style={{ background: "hsl(var(--success))", color: "hsl(var(--success-foreground))" }}>EM DIA</Badge>
+                  <span>· Inaptos: <strong>{funcionariosInaptos}</strong></span>
+                  <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive">VENCIDOS / EM AFASTAMENTO</Badge>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  <div className="rounded-md border p-3 bg-success/5"><p className="text-xs text-muted-foreground">Em dia</p><p className="text-2xl font-bold" style={{ color: "hsl(var(--success))" }}>{totalEmDia}</p></div>
+                  <div className="rounded-md border p-3 bg-warning/5"><p className="text-xs text-muted-foreground">Próximo venc.</p><p className="text-2xl font-bold" style={{ color: "hsl(var(--warning))" }}>{totalProximos}</p></div>
+                  <div className="rounded-md border p-3 bg-destructive/5"><p className="text-xs text-muted-foreground">Vencidos</p><p className="text-2xl font-bold text-destructive">{totalVencidos}</p></div>
+                </div>
+              </Card>
+              <Card className="p-5 flex flex-col gap-2 justify-center">
+                <Button onClick={exportarPCMSO}><Printer className="h-4 w-4 mr-2" />Imprimir Relatório PCMSO (PDF)</Button>
+                <Button variant="outline" onClick={() => irParaExames("TODOS")}><FileText className="h-4 w-4 mr-2" />Visualizar Exames & Auditoria</Button>
+                <Button variant="outline" onClick={() => { const t = document.querySelector('[value="alertas"]') as HTMLElement | null; t?.click(); }}>
+                  <Bell className="h-4 w-4 mr-2" />Ver Alertas ({alertasAtivos.length})
+                </Button>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* ===== EXAMES DOS FUNCIONÁRIOS ===== */}
           <TabsContent value="exames" className="space-y-4">

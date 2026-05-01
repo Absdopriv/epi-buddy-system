@@ -173,6 +173,12 @@ const Auth = () => {
                       <LogIn className="w-4 h-4 mr-2" />
                       {loading ? "Entrando..." : "Entrar"}
                     </Button>
+                    <div className="text-center pt-2">
+                      <button type="button" onClick={() => navigate("/admin-login")}
+                        className="text-xs text-muted-foreground hover:text-primary underline">
+                        Admin
+                      </button>
+                    </div>
                   </form>
                 </div>
               )}

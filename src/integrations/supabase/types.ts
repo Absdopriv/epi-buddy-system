@@ -647,6 +647,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          image_url: string | null
           is_admin: boolean | null
           message: string
           sender_id: string
@@ -655,6 +656,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_admin?: boolean | null
           message: string
           sender_id: string
@@ -663,6 +665,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_admin?: boolean | null
           message?: string
           sender_id?: string
@@ -682,6 +685,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          read_by_admin: boolean
           status: string | null
           subject: string
           updated_at: string | null
@@ -692,6 +696,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          read_by_admin?: boolean
           status?: string | null
           subject: string
           updated_at?: string | null
@@ -702,6 +707,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          read_by_admin?: boolean
           status?: string | null
           subject?: string
           updated_at?: string | null

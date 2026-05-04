@@ -86,12 +86,12 @@ function asoPdf(empresa, funcionario, aso, exames, outPath) {
 }
 
 const empresa = await getEmpresa();
-const { data: funcs } = await supabase.from("funcionarios").select("*").eq("user_id",USER).order("nome");
-const { data: atribs } = await supabase.from("epi_atribuicoes").select("*").eq("user_id",USER);
-const { data: epis } = await supabase.from("epis").select("*").eq("user_id",USER);
-const { data: asos } = await supabase.from("asos").select("*").eq("user_id",USER);
-const { data: ef } = await supabase.from("exames_funcionario").select("*").eq("user_id",USER);
-const { data: exOcup } = await supabase.from("exames_ocupacionais").select("*").eq("user_id",USER);
+const funcs = q(`SELECT * FROM funcionarios WHERE user_id='${USER}' ORDER BY nome`);
+const atribs = q(`SELECT * FROM epi_atribuicoes WHERE user_id='${USER}'`);
+const epis = q(`SELECT * FROM epis WHERE user_id='${USER}'`);
+const asos = q(`SELECT * FROM asos WHERE user_id='${USER}'`);
+const ef = q(`SELECT * FROM exames_funcionario WHERE user_id='${USER}'`);
+const exOcup = q(`SELECT * FROM exames_ocupacionais WHERE user_id='${USER}'`);
 
 fs.mkdirSync("/mnt/documents/teste-pdfs", { recursive: true });
 

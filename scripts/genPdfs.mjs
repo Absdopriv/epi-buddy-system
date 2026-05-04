@@ -1,18 +1,14 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { createClient } from "@supabase/supabase-js";
+import { execSync } from "child_process";
 import fs from "fs";
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(SUPABASE_URL, SERVICE);
 const USER = "346f19f1-ef0e-4249-b98d-03dcdcbfd4d2";
-
 const fmt = (d) => d ? new Date(d).toLocaleDateString("pt-BR") : "—";
-
+const q = (sql) => JSON.parse(execSync(`psql -t -A -c "SELECT json_agg(t) FROM (${sql}) t"`,{encoding:"utf8"}).trim() || "null") || [];
 async function getEmpresa() {
-  const { data } = await supabase.from("profiles").select("razao_social,cnpj").eq("user_id", USER).maybeSingle();
-  return data || {};
+  const r = q(`SELECT razao_social,cnpj FROM profiles WHERE user_id='${USER}'`);
+  return r[0] || {};
 }
 
 function fichaEPI(funcionario, items, empresa, outPath) {

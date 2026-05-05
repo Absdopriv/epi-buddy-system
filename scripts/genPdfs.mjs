@@ -107,7 +107,7 @@ for (const f of funcs) {
   }
   const fAsos = asos.filter(a=>a.funcionario_id===f.id);
   for (const aso of fAsos) {
-    const exFunc = ef.filter(x=>x.funcionario_id===f.id);
+    const exFunc = ef.filter(x=>x.funcionario_id===f.id && x.tipo_exame===aso.tipo_exame);
     const exames = exFunc.map(x=>{
       const o = exOcup.find(o=>o.id===x.exame_id);
       return o ? {nome:o.nome, tipo:o.tipo, data_realizacao:x.data_realizacao, resultado:x.resultado}: null;

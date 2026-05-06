@@ -492,9 +492,13 @@ export type Database = {
           cpf: string
           created_at: string
           data_admissao: string | null
+          data_nascimento: string | null
+          email: string | null
           id: string
           nome: string
+          rg: string | null
           setor: string
+          telefone: string | null
           updated_at: string
           user_id: string
         }
@@ -504,9 +508,13 @@ export type Database = {
           cpf: string
           created_at?: string
           data_admissao?: string | null
+          data_nascimento?: string | null
+          email?: string | null
           id?: string
           nome: string
+          rg?: string | null
           setor: string
+          telefone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -516,9 +524,13 @@ export type Database = {
           cpf?: string
           created_at?: string
           data_admissao?: string | null
+          data_nascimento?: string | null
+          email?: string | null
           id?: string
           nome?: string
+          rg?: string | null
           setor?: string
+          telefone?: string | null
           updated_at?: string
           user_id?: string
         }

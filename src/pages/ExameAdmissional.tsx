@@ -654,6 +654,56 @@ const ExameAdmissional = () => {
 
           {/* ===== EXAMES DOS FUNCIONÁRIOS ===== */}
           <TabsContent value="exames" className="space-y-4">
+            {/* Adicionar risco ao funcionário */}
+            <Card className="p-4 border-l-4 border-l-primary">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" /> Adicionar risco ocupacional ao funcionário
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Selecione um funcionário e um risco. Os exames obrigatórios serão vinculados automaticamente.
+              </p>
+              <div className="grid md:grid-cols-3 gap-3">
+                <Select value={funcSelecionado} onValueChange={setFuncSelecionado}>
+                  <SelectTrigger><SelectValue placeholder="Funcionário" /></SelectTrigger>
+                  <SelectContent>
+                    {funcionarios.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nome} {f.cargo ? `— ${f.cargo}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={riscoParaFunc} onValueChange={setRiscoParaFunc}>
+                  <SelectTrigger><SelectValue placeholder="Risco ocupacional" /></SelectTrigger>
+                  <SelectContent>
+                    {riscos.map(r => (
+                      <SelectItem key={r.id} value={r.id}>{r.descricao}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={adicionarRiscoAoFuncionario} disabled={!funcSelecionado || !riscoParaFunc}>
+                  <Plus className="h-4 w-4 mr-1" /> Vincular e gerar exames
+                </Button>
+              </div>
+              {funcSelecionado && (() => {
+                const f = funcionarios.find(x => x.id === funcSelecionado);
+                if (!f?.cargo_id) return null;
+                const riscosCargo = cargoRiscos
+                  .filter(cr => cr.cargo_id === f.cargo_id)
+                  .map(cr => riscos.find(r => r.id === cr.risco_id))
+                  .filter(Boolean);
+                return (
+                  <div className="mt-3 text-sm">
+                    <span className="text-muted-foreground">Riscos atuais do cargo:</span>{" "}
+                    {riscosCargo.length === 0
+                      ? <span className="text-xs text-muted-foreground">nenhum</span>
+                      : riscosCargo.map(r => <Badge key={r!.id} variant="secondary" className="ml-1">{r!.descricao}</Badge>)}
+                  </div>
+                );
+              })()}
+            </Card>
+
+
             <Card className="p-4">
               <div className="grid md:grid-cols-4 gap-3">
                 <div>

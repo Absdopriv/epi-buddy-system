@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EPIForm } from "@/components/EPIForm";
-import { FuncionarioForm } from "@/components/FuncionarioForm";
+
 import { FuncionarioEPIManager } from "@/components/FuncionarioEPIManager";
 import { EPIsVencidas } from "@/components/EPIsVencidas";
 import { UpdateCAModal } from "@/components/UpdateCAModal";
 import { ViewEPIModal } from "@/components/ViewEPIModal";
 import { EditEPIModal } from "@/components/EditEPIModal";
-import { HardHat, User, Users, AlertTriangle } from "lucide-react";
+import { HardHat, Users, AlertTriangle } from "lucide-react";
 import { EPI, Funcionario, EPIAtribuicao } from "@/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,16 +168,11 @@ const Index = () => {
       <Navbar empresaNome={empresaNome} />
       <main className="container mx-auto px-4 pt-24 pb-8">
         <Tabs defaultValue="gerenciar" className="space-y-6">
-          <TabsList className="grid grid-cols-2 lg:grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="epi" className="flex items-center gap-2">
               <HardHat className="h-4 w-4" />
               <span className="hidden sm:inline">Cadastro de EPI</span>
               <span className="sm:hidden">EPI</span>
-            </TabsTrigger>
-            <TabsTrigger value="funcionario" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Cadastro de Funcionário</span>
-              <span className="sm:hidden">Funcionário</span>
             </TabsTrigger>
             <TabsTrigger value="gerenciar" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -193,9 +188,6 @@ const Index = () => {
 
           <TabsContent value="epi">
             <EPIForm onAdd={handleAddEPI} />
-          </TabsContent>
-          <TabsContent value="funcionario">
-            <FuncionarioForm onAdd={handleAddFuncionario} />
           </TabsContent>
           <TabsContent value="gerenciar">
             <FuncionarioEPIManager

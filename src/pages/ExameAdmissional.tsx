@@ -726,6 +726,44 @@ const ExameAdmissional = () => {
 
           <TabsContent value="riscos" className="space-y-4">
             <Card className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />Vincular risco a cargo
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Cargos são gerenciados no módulo "Cadastro de Funcionários".
+              </p>
+              <div className="grid md:grid-cols-3 gap-3">
+                <Select value={vincCargo} onValueChange={setVincCargo}>
+                  <SelectTrigger><SelectValue placeholder="Cargo" /></SelectTrigger>
+                  <SelectContent>{cargos.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={vincRisco} onValueChange={setVincRisco}>
+                  <SelectTrigger><SelectValue placeholder="Risco" /></SelectTrigger>
+                  <SelectContent>{riscos.map(r => <SelectItem key={r.id} value={r.id}>{r.descricao}</SelectItem>)}</SelectContent>
+                </Select>
+                <Button onClick={vincularCargoRisco}>Vincular</Button>
+              </div>
+              {cargos.length > 0 && (
+                <div className="mt-4 space-y-1 text-sm">
+                  {cargos.map(c => {
+                    const rs = cargoRiscos.filter(x => x.cargo_id === c.id)
+                      .map(x => riscos.find(r => r.id === x.risco_id)?.descricao).filter(Boolean);
+                    return (
+                      <div key={c.id} className="flex items-start gap-2 py-1 border-b last:border-0">
+                        <span className="font-medium min-w-[140px]">{c.nome}:</span>
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {rs.length === 0
+                            ? <span className="text-xs text-muted-foreground">sem riscos vinculados</span>
+                            : rs.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-4">
               <h3 className="font-semibold mb-3">Novo risco ocupacional</h3>
               <div className="grid md:grid-cols-4 gap-3">
                 <Input placeholder="Descrição" value={novoRisco.descricao} onChange={e => setNovoRisco({ ...novoRisco, descricao: e.target.value })} className="md:col-span-2" />

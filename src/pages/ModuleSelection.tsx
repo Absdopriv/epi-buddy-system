@@ -76,7 +76,7 @@ const ModuleSelection = () => {
                 Cadastre, edite e visualize EPIs, gerencie funcionários e controle as atribuições de equipamentos.
               </p>
               <div className="space-y-2 mb-6 flex-1">
-                {["Cadastro de EPIs e funcionários", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
+                {["Cadastro de EPIs", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
                   <div key={t} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary" /><span>{t}</span>
                   </div>

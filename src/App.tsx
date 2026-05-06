@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import ModuleSelection from "./pages/ModuleSelection";
 import Seguranca from "./pages/Seguranca";
 import ExameAdmissional from "./pages/ExameAdmissional";
+import Funcionarios from "./pages/Funcionarios";
 import AdminLogin from "./pages/AdminLogin";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/epis" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/seguranca" element={<ProtectedRoute><Seguranca /></ProtectedRoute>} />
             <Route path="/exame-admissional" element={<ProtectedRoute><ExameAdmissional /></ProtectedRoute>} />
+            <Route path="/funcionarios" element={<ProtectedRoute><Funcionarios /></ProtectedRoute>} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/auth" element={<Auth />} />

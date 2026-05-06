@@ -95,16 +95,6 @@ const Index = () => {
     setEpis(prev => prev.map(e => e.id === updatedEPI.id ? updatedEPI : e));
   };
 
-  const handleAddFuncionario = async (funcionario: Funcionario) => {
-    if (!user) return;
-    const { data, error } = await supabase.from("funcionarios").insert({
-      user_id: user.id, nome: funcionario.nome, cpf: funcionario.cpf,
-      cargo: funcionario.cargo, setor: funcionario.setor,
-    }).select().single();
-    if (error) { toast.error("Erro ao cadastrar funcionário"); return; }
-    setFuncionarios(prev => [{ id: data.id, nome: data.nome, cpf: data.cpf, cargo: data.cargo, setor: data.setor }, ...prev]);
-  };
-
   const handleDeleteFuncionario = async (id: string) => {
     const { error } = await supabase.from("funcionarios").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir funcionário"); return; }

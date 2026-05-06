@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HardHat, ShieldAlert, ArrowRight, CheckCircle2, FileText, ClipboardList, BadgeCheck, Stethoscope, Bell, Activity } from "lucide-react";
+import { HardHat, ShieldAlert, ArrowRight, CheckCircle2, FileText, ClipboardList, BadgeCheck, Stethoscope, Bell, Activity, Users, Briefcase, IdCard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,7 +28,7 @@ const ModuleSelection = () => {
             <p className="text-muted-foreground text-lg">Escolha o módulo que deseja acessar</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Módulo EPIs */}
             <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
               onClick={() => navigate("/epis")}>

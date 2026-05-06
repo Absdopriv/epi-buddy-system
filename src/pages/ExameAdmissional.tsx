@@ -724,52 +724,6 @@ const ExameAdmissional = () => {
             })}
           </TabsContent>
 
-          {/* ===== CARGOS ===== */}
-          <TabsContent value="cargos" className="space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><Plus className="h-4 w-4" />Novo cargo</h3>
-              <div className="grid md:grid-cols-3 gap-3">
-                <Input placeholder="Nome do cargo" value={novoCargo.nome} onChange={e => setNovoCargo({ ...novoCargo, nome: e.target.value })} />
-                <Input placeholder="Descrição (opcional)" value={novoCargo.descricao} onChange={e => setNovoCargo({ ...novoCargo, descricao: e.target.value })} className="md:col-span-2" />
-                <Button onClick={addCargo}><Plus className="h-4 w-4 mr-1" />Adicionar</Button>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Vincular risco a cargo</h3>
-              <div className="grid md:grid-cols-3 gap-3">
-                <Select value={vincCargo} onValueChange={setVincCargo}>
-                  <SelectTrigger><SelectValue placeholder="Cargo" /></SelectTrigger>
-                  <SelectContent>{cargos.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select value={vincRisco} onValueChange={setVincRisco}>
-                  <SelectTrigger><SelectValue placeholder="Risco" /></SelectTrigger>
-                  <SelectContent>{riscos.map(r => <SelectItem key={r.id} value={r.id}>{r.descricao}</SelectItem>)}</SelectContent>
-                </Select>
-                <Button onClick={vincularCargoRisco}>Vincular</Button>
-              </div>
-            </Card>
-
-            <Card className="p-0 overflow-hidden">
-              <Table>
-                <TableHeader><TableRow><TableHead>Cargo</TableHead><TableHead>Riscos vinculados</TableHead><TableHead /></TableRow></TableHeader>
-                <TableBody>
-                  {cargos.map(c => {
-                    const rs = cargoRiscos.filter(x => x.cargo_id === c.id).map(x => riscos.find(r => r.id === x.risco_id)?.descricao).filter(Boolean);
-                    return (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.nome}</TableCell>
-                        <TableCell><div className="flex flex-wrap gap-1">{rs.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div></TableCell>
-                        <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={() => delCargo(c.id)}><Trash2 className="h-3 w-3" /></Button></TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
-          </TabsContent>
-
-          {/* ===== RISCOS ===== */}
           <TabsContent value="riscos" className="space-y-4">
             <Card className="p-4">
               <h3 className="font-semibold mb-3">Novo risco ocupacional</h3>

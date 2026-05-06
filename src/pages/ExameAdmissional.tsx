@@ -453,11 +453,10 @@ const ExameAdmissional = () => {
         </div>
 
         <Tabs defaultValue="dashboard">
-          <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-1 mb-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1 mb-6">
             <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
             <TabsTrigger value="exames" data-tab-target="exames"><Activity className="h-4 w-4 mr-1" />Exames</TabsTrigger>
             <TabsTrigger value="alertas"><Bell className="h-4 w-4 mr-1" />Alertas{alertasAtivos.length > 0 && <Badge className="ml-2 h-5 px-1.5">{alertasAtivos.length}</Badge>}</TabsTrigger>
-            <TabsTrigger value="cargos"><Briefcase className="h-4 w-4 mr-1" />Cargos</TabsTrigger>
             <TabsTrigger value="riscos"><AlertTriangle className="h-4 w-4 mr-1" />Riscos</TabsTrigger>
             <TabsTrigger value="catalogo"><ClipboardList className="h-4 w-4 mr-1" />Exames Cat.</TabsTrigger>
           </TabsList>

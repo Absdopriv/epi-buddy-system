@@ -68,6 +68,10 @@ const ExameAdmissional = () => {
   const [vincRiscoEx, setVincRiscoEx] = useState<string>("");
   const [vincExameEx, setVincExameEx] = useState<string>("");
 
+  // Adicionar risco a funcionário (na aba Exames)
+  const [funcSelecionado, setFuncSelecionado] = useState<string>("");
+  const [riscoParaFunc, setRiscoParaFunc] = useState<string>("");
+
   const [filtros, setFiltros] = useState({ funcionario: "", situacao: "TODOS", cargo: "TODOS" });
   const [registrar, setRegistrar] = useState<ExameFunc | null>(null);
   const [regForm, setRegForm] = useState({ data_realizacao: "", resultado: "APTO", medico_responsavel: "", crm_medico: "", observacoes: "" });

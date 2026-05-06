@@ -68,6 +68,10 @@ const ExameAdmissional = () => {
   const [vincRiscoEx, setVincRiscoEx] = useState<string>("");
   const [vincExameEx, setVincExameEx] = useState<string>("");
 
+  // Adicionar risco a funcionário (na aba Exames)
+  const [funcSelecionado, setFuncSelecionado] = useState<string>("");
+  const [riscoParaFunc, setRiscoParaFunc] = useState<string>("");
+
   const [filtros, setFiltros] = useState({ funcionario: "", situacao: "TODOS", cargo: "TODOS" });
   const [registrar, setRegistrar] = useState<ExameFunc | null>(null);
   const [regForm, setRegForm] = useState({ data_realizacao: "", resultado: "APTO", medico_responsavel: "", crm_medico: "", observacoes: "" });
@@ -210,6 +214,46 @@ const ExameAdmissional = () => {
     if (error) return toast.error(error.message);
     setRiscoExames([...riscoExames, { risco_id: vincRiscoEx, exame_id: vincExameEx }]);
     toast.success("Exame vinculado ao risco");
+  };
+
+  // Adiciona risco ao cargo do funcionário e gera exames pendentes para ele
+  const adicionarRiscoAoFuncionario = async () => {
+    if (!user || !funcSelecionado || !riscoParaFunc) return;
+    const f = funcionarios.find(x => x.id === funcSelecionado);
+    if (!f?.cargo_id) return toast.error("Funcionário sem cargo. Edite no módulo Cadastro de Funcionários.");
+
+    // 1. vincula risco ao cargo (se ainda não)
+    const jaVinc = cargoRiscos.some(cr => cr.cargo_id === f.cargo_id && cr.risco_id === riscoParaFunc);
+    if (!jaVinc) {
+      const { error } = await supabase.from("cargo_riscos").insert({
+        user_id: user.id, cargo_id: f.cargo_id, risco_id: riscoParaFunc,
+      });
+      if (error) return toast.error(error.message);
+      setCargoRiscos([...cargoRiscos, { cargo_id: f.cargo_id, risco_id: riscoParaFunc }]);
+    }
+
+    // 2. exames obrigatórios deste risco
+    const exameIds = riscoExames.filter(re => re.risco_id === riscoParaFunc).map(re => re.exame_id);
+    if (exameIds.length === 0) {
+      toast.warning("Risco sem exames vinculados. Vincule exames ao risco na aba Riscos.");
+      return;
+    }
+
+    // 3. cria exames pendentes que ainda não existem para este funcionário
+    const existentes = new Set(examesFunc.filter(e => e.funcionario_id === f.id).map(e => e.exame_id));
+    const novos = exameIds.filter(id => !existentes.has(id)).map(exame_id => ({
+      user_id: user.id, funcionario_id: f.id, exame_id,
+      tipo_exame: "Admissional", situacao: "PENDENTE",
+    }));
+    if (novos.length === 0) {
+      toast.info("Todos os exames deste risco já estão atribuídos");
+      return;
+    }
+    const { data, error } = await supabase.from("exames_funcionario").insert(novos).select();
+    if (error) return toast.error(error.message);
+    setExamesFunc([...(data as ExameFunc[]), ...examesFunc]);
+    setRiscoParaFunc("");
+    toast.success(`${novos.length} exame(s) vinculados a ${f.nome}`);
   };
 
   // --- Registrar exame realizado
@@ -453,11 +497,10 @@ const ExameAdmissional = () => {
         </div>
 
         <Tabs defaultValue="dashboard">
-          <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-1 mb-6">
+          <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-1 mb-6">
             <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-1" />Dashboard</TabsTrigger>
             <TabsTrigger value="exames" data-tab-target="exames"><Activity className="h-4 w-4 mr-1" />Exames</TabsTrigger>
             <TabsTrigger value="alertas"><Bell className="h-4 w-4 mr-1" />Alertas{alertasAtivos.length > 0 && <Badge className="ml-2 h-5 px-1.5">{alertasAtivos.length}</Badge>}</TabsTrigger>
-            <TabsTrigger value="cargos"><Briefcase className="h-4 w-4 mr-1" />Cargos</TabsTrigger>
             <TabsTrigger value="riscos"><AlertTriangle className="h-4 w-4 mr-1" />Riscos</TabsTrigger>
             <TabsTrigger value="catalogo"><ClipboardList className="h-4 w-4 mr-1" />Exames Cat.</TabsTrigger>
           </TabsList>
@@ -611,6 +654,56 @@ const ExameAdmissional = () => {
 
           {/* ===== EXAMES DOS FUNCIONÁRIOS ===== */}
           <TabsContent value="exames" className="space-y-4">
+            {/* Adicionar risco ao funcionário */}
+            <Card className="p-4 border-l-4 border-l-primary">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" /> Adicionar risco ocupacional ao funcionário
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Selecione um funcionário e um risco. Os exames obrigatórios serão vinculados automaticamente.
+              </p>
+              <div className="grid md:grid-cols-3 gap-3">
+                <Select value={funcSelecionado} onValueChange={setFuncSelecionado}>
+                  <SelectTrigger><SelectValue placeholder="Funcionário" /></SelectTrigger>
+                  <SelectContent>
+                    {funcionarios.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.nome} {f.cargo ? `— ${f.cargo}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={riscoParaFunc} onValueChange={setRiscoParaFunc}>
+                  <SelectTrigger><SelectValue placeholder="Risco ocupacional" /></SelectTrigger>
+                  <SelectContent>
+                    {riscos.map(r => (
+                      <SelectItem key={r.id} value={r.id}>{r.descricao}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={adicionarRiscoAoFuncionario} disabled={!funcSelecionado || !riscoParaFunc}>
+                  <Plus className="h-4 w-4 mr-1" /> Vincular e gerar exames
+                </Button>
+              </div>
+              {funcSelecionado && (() => {
+                const f = funcionarios.find(x => x.id === funcSelecionado);
+                if (!f?.cargo_id) return null;
+                const riscosCargo = cargoRiscos
+                  .filter(cr => cr.cargo_id === f.cargo_id)
+                  .map(cr => riscos.find(r => r.id === cr.risco_id))
+                  .filter(Boolean);
+                return (
+                  <div className="mt-3 text-sm">
+                    <span className="text-muted-foreground">Riscos atuais do cargo:</span>{" "}
+                    {riscosCargo.length === 0
+                      ? <span className="text-xs text-muted-foreground">nenhum</span>
+                      : riscosCargo.map(r => <Badge key={r!.id} variant="secondary" className="ml-1">{r!.descricao}</Badge>)}
+                  </div>
+                );
+              })()}
+            </Card>
+
+
             <Card className="p-4">
               <div className="grid md:grid-cols-4 gap-3">
                 <div>
@@ -725,19 +818,14 @@ const ExameAdmissional = () => {
             })}
           </TabsContent>
 
-          {/* ===== CARGOS ===== */}
-          <TabsContent value="cargos" className="space-y-4">
+          <TabsContent value="riscos" className="space-y-4">
             <Card className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><Plus className="h-4 w-4" />Novo cargo</h3>
-              <div className="grid md:grid-cols-3 gap-3">
-                <Input placeholder="Nome do cargo" value={novoCargo.nome} onChange={e => setNovoCargo({ ...novoCargo, nome: e.target.value })} />
-                <Input placeholder="Descrição (opcional)" value={novoCargo.descricao} onChange={e => setNovoCargo({ ...novoCargo, descricao: e.target.value })} className="md:col-span-2" />
-                <Button onClick={addCargo}><Plus className="h-4 w-4 mr-1" />Adicionar</Button>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Vincular risco a cargo</h3>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Briefcase className="h-4 w-4" />Vincular risco a cargo
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Cargos são gerenciados no módulo "Cadastro de Funcionários".
+              </p>
               <div className="grid md:grid-cols-3 gap-3">
                 <Select value={vincCargo} onValueChange={setVincCargo}>
                   <SelectTrigger><SelectValue placeholder="Cargo" /></SelectTrigger>
@@ -749,29 +837,26 @@ const ExameAdmissional = () => {
                 </Select>
                 <Button onClick={vincularCargoRisco}>Vincular</Button>
               </div>
-            </Card>
-
-            <Card className="p-0 overflow-hidden">
-              <Table>
-                <TableHeader><TableRow><TableHead>Cargo</TableHead><TableHead>Riscos vinculados</TableHead><TableHead /></TableRow></TableHeader>
-                <TableBody>
+              {cargos.length > 0 && (
+                <div className="mt-4 space-y-1 text-sm">
                   {cargos.map(c => {
-                    const rs = cargoRiscos.filter(x => x.cargo_id === c.id).map(x => riscos.find(r => r.id === x.risco_id)?.descricao).filter(Boolean);
+                    const rs = cargoRiscos.filter(x => x.cargo_id === c.id)
+                      .map(x => riscos.find(r => r.id === x.risco_id)?.descricao).filter(Boolean);
                     return (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.nome}</TableCell>
-                        <TableCell><div className="flex flex-wrap gap-1">{rs.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</div></TableCell>
-                        <TableCell className="text-right"><Button size="sm" variant="ghost" onClick={() => delCargo(c.id)}><Trash2 className="h-3 w-3" /></Button></TableCell>
-                      </TableRow>
+                      <div key={c.id} className="flex items-start gap-2 py-1 border-b last:border-0">
+                        <span className="font-medium min-w-[140px]">{c.nome}:</span>
+                        <div className="flex flex-wrap gap-1 flex-1">
+                          {rs.length === 0
+                            ? <span className="text-xs text-muted-foreground">sem riscos vinculados</span>
+                            : rs.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                        </div>
+                      </div>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+              )}
             </Card>
-          </TabsContent>
 
-          {/* ===== RISCOS ===== */}
-          <TabsContent value="riscos" className="space-y-4">
             <Card className="p-4">
               <h3 className="font-semibold mb-3">Novo risco ocupacional</h3>
               <div className="grid md:grid-cols-4 gap-3">

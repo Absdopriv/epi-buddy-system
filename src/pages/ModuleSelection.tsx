@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HardHat, ShieldAlert, ArrowRight, CheckCircle2, FileText, ClipboardList, BadgeCheck, Stethoscope, Bell, Activity } from "lucide-react";
+import { HardHat, ShieldAlert, ArrowRight, CheckCircle2, FileText, ClipboardList, BadgeCheck, Stethoscope, Bell, Activity, Users, Briefcase, IdCard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,7 +28,38 @@ const ModuleSelection = () => {
             <p className="text-muted-foreground text-lg">Escolha o módulo que deseja acessar</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Módulo Cadastro de Funcionários (central) */}
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+              onClick={() => navigate("/funcionarios")}>
+              <div className="flex items-start gap-4 mb-6">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
+                  <Users className="h-8 w-8" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-foreground mb-1">Cadastro de Funcionários</h2>
+                  <p className="text-sm text-muted-foreground">Fonte única de funcionários e cargos</p>
+                </div>
+              </div>
+              <p className="text-foreground/80 mb-6">
+                Cadastre funcionários e cargos uma única vez. Todos os módulos consomem esta base.
+              </p>
+              <div className="space-y-2 mb-6 flex-1">
+                {[
+                  { icon: IdCard, label: "Dados completos do colaborador" },
+                  { icon: Briefcase, label: "Cargos centralizados" },
+                  { icon: CheckCircle2, label: "Integração total com EPI e ASO" },
+                ].map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Icon className="h-4 w-4 text-primary" /><span>{label}</span>
+                  </div>
+                ))}
+              </div>
+              <Button className="w-full group-hover:gap-3 transition-all">
+                Acessar Módulo <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Card>
+
             {/* Módulo EPIs */}
             <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
               onClick={() => navigate("/epis")}>
@@ -45,7 +76,7 @@ const ModuleSelection = () => {
                 Cadastre, edite e visualize EPIs, gerencie funcionários e controle as atribuições de equipamentos.
               </p>
               <div className="space-y-2 mb-6 flex-1">
-                {["Cadastro de EPIs e funcionários", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
+                {["Cadastro de EPIs", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
                   <div key={t} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary" /><span>{t}</span>
                   </div>

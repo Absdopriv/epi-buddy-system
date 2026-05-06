@@ -216,6 +216,46 @@ const ExameAdmissional = () => {
     toast.success("Exame vinculado ao risco");
   };
 
+  // Adiciona risco ao cargo do funcionário e gera exames pendentes para ele
+  const adicionarRiscoAoFuncionario = async () => {
+    if (!user || !funcSelecionado || !riscoParaFunc) return;
+    const f = funcionarios.find(x => x.id === funcSelecionado);
+    if (!f?.cargo_id) return toast.error("Funcionário sem cargo. Edite no módulo Cadastro de Funcionários.");
+
+    // 1. vincula risco ao cargo (se ainda não)
+    const jaVinc = cargoRiscos.some(cr => cr.cargo_id === f.cargo_id && cr.risco_id === riscoParaFunc);
+    if (!jaVinc) {
+      const { error } = await supabase.from("cargo_riscos").insert({
+        user_id: user.id, cargo_id: f.cargo_id, risco_id: riscoParaFunc,
+      });
+      if (error) return toast.error(error.message);
+      setCargoRiscos([...cargoRiscos, { cargo_id: f.cargo_id, risco_id: riscoParaFunc }]);
+    }
+
+    // 2. exames obrigatórios deste risco
+    const exameIds = riscoExames.filter(re => re.risco_id === riscoParaFunc).map(re => re.exame_id);
+    if (exameIds.length === 0) {
+      toast.warning("Risco sem exames vinculados. Vincule exames ao risco na aba Riscos.");
+      return;
+    }
+
+    // 3. cria exames pendentes que ainda não existem para este funcionário
+    const existentes = new Set(examesFunc.filter(e => e.funcionario_id === f.id).map(e => e.exame_id));
+    const novos = exameIds.filter(id => !existentes.has(id)).map(exame_id => ({
+      user_id: user.id, funcionario_id: f.id, exame_id,
+      tipo_exame: "Admissional", situacao: "PENDENTE",
+    }));
+    if (novos.length === 0) {
+      toast.info("Todos os exames deste risco já estão atribuídos");
+      return;
+    }
+    const { data, error } = await supabase.from("exames_funcionario").insert(novos).select();
+    if (error) return toast.error(error.message);
+    setExamesFunc([...(data as ExameFunc[]), ...examesFunc]);
+    setRiscoParaFunc("");
+    toast.success(`${novos.length} exame(s) vinculados a ${f.nome}`);
+  };
+
   // --- Registrar exame realizado
   const abrirRegistrar = (e: ExameFunc) => {
     setRegistrar(e);

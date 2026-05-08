@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -18,20 +18,25 @@ import {
 import {
   ArrowLeft, Users, Plus, Search, Pencil, Trash2, Eye, Briefcase, UserPlus,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import {
-  cargos as cargosApi,
-  funcionarios as funcionariosApi,
-  setores as setoresApi,
-  type Cargo,
-  type Funcionario,
-  type FuncionarioStatus,
-  type Setor,
-  type ID,
-} from "@/lib/api";
+
+type Cargo = { id: string; nome: string };
+type FuncionarioRow = {
+  id: string;
+  nome: string;
+  cpf: string;
+  cargo: string;
+  cargo_id: string | null;
+  setor: string;
+  data_nascimento: string | null;
+  data_admissao: string | null;
+  rg: string | null;
+  telefone: string | null;
+  email: string | null;
+};
 
 const formatCPF = (value: string) => {
   const n = value.replace(/\D/g, "").slice(0, 11);
@@ -41,75 +46,45 @@ const formatCPF = (value: string) => {
     .replace(/(\d{3})(\d{1,2})/, "$1-$2");
 };
 
-interface FormState {
-  matricula: string;
-  nome: string;
-  cpf: string;
-  rg: string;
-  dataNascimento: string;
-  dataAdmissao: string;
-  telefone: string;
-  email: string;
-  status: FuncionarioStatus;
-  id_cargo: string;
-  id_setor: string;
-}
-
-const empty: FormState = {
-  matricula: "", nome: "", cpf: "", rg: "",
-  dataNascimento: "", dataAdmissao: "",
-  telefone: "", email: "",
-  status: "ATIVO",
-  id_cargo: "", id_setor: "",
+const empty = {
+  nome: "", cpf: "", cargo_id: "", setor: "",
+  data_nascimento: "", data_admissao: "",
+  rg: "", telefone: "", email: "",
 };
 
 const Funcionarios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [empresaNome, setEmpresaNome] = useState("Sua Empresa");
-
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioRow[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
-  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Cadastro de cargo rápido
   const [novoCargo, setNovoCargo] = useState("");
 
-  const [form, setForm] = useState<FormState>(empty);
-  const [editingId, setEditingId] = useState<ID | null>(null);
+  // Form (criar/editar)
+  const [form, setForm] = useState(empty);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewing, setViewing] = useState<Funcionario | null>(null);
+  const [viewing, setViewing] = useState<FuncionarioRow | null>(null);
 
+  // Busca + filtro
   const [search, setSearch] = useState("");
   const [filtroCargo, setFiltroCargo] = useState<string>("TODOS");
 
-  const cargoNome = (id?: ID | null) =>
-    cargos.find(c => String(c.id) === String(id))?.nome || "—";
-  const setorNome = (id?: ID | null) =>
-    setores.find(s => String(s.id) === String(id))?.nome || "—";
-
   const fetchAll = async () => {
+    if (!user) return;
     setLoading(true);
-    try {
-      const [fn, cg, st] = await Promise.all([
-        funcionariosApi.list(),
-        cargosApi.list(),
-        setoresApi.list(),
-      ]);
-      setFuncionarios(fn);
-      setCargos(cg);
-      setSetores(st);
-    } catch (e: any) {
-      toast.error(`Erro ao carregar dados: ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
-
-    if (user) {
-      const { data } = await supabase
-        .from("profiles").select("razao_social").eq("user_id", user.id).maybeSingle();
-      if (data?.razao_social) setEmpresaNome(data.razao_social);
-    }
+    const [pf, fn, cg] = await Promise.all([
+      supabase.from("profiles").select("razao_social").eq("user_id", user.id).maybeSingle(),
+      supabase.from("funcionarios").select("*").order("nome"),
+      supabase.from("cargos").select("id,nome").order("nome"),
+    ]);
+    if (pf.data?.razao_social) setEmpresaNome(pf.data.razao_social);
+    setFuncionarios((fn.data || []) as FuncionarioRow[]);
+    setCargos((cg.data || []) as Cargo[]);
+    setLoading(false);
   };
 
   useEffect(() => { fetchAll(); /* eslint-disable-next-line */ }, [user]);
@@ -120,103 +95,97 @@ const Funcionarios = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (f: Funcionario) => {
+  const openEdit = (f: FuncionarioRow) => {
     setEditingId(f.id);
     setForm({
-      matricula: f.matricula || "",
       nome: f.nome,
-      cpf: f.cpf || "",
+      cpf: f.cpf,
+      cargo_id: f.cargo_id || "",
+      setor: f.setor || "",
+      data_nascimento: f.data_nascimento || "",
+      data_admissao: f.data_admissao || "",
       rg: f.rg || "",
-      dataNascimento: f.dataNascimento || "",
-      dataAdmissao: f.dataAdmissao || "",
       telefone: f.telefone || "",
       email: f.email || "",
-      status: f.status || "ATIVO",
-      id_cargo: f.id_cargo != null ? String(f.id_cargo) : "",
-      id_setor: f.id_setor != null ? String(f.id_setor) : "",
     });
     setDialogOpen(true);
   };
 
   const addCargoRapido = async () => {
-    if (!novoCargo.trim()) return;
-    try {
-      const created = await cargosApi.create({
-        nome: novoCargo.trim(),
-        id_setor: form.id_setor ? Number(form.id_setor) : undefined,
-      });
-      setCargos(prev => [...prev, created].sort((a, b) => a.nome.localeCompare(b.nome)));
-      setForm(prev => ({ ...prev, id_cargo: String(created.id) }));
-      setNovoCargo("");
-      toast.success("Cargo cadastrado");
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    if (!user || !novoCargo.trim()) return;
+    const { data, error } = await supabase
+      .from("cargos")
+      .insert({ user_id: user.id, nome: novoCargo.trim() })
+      .select().single();
+    if (error) return toast.error(error.message);
+    setCargos(prev => [...prev, data as Cargo].sort((a, b) => a.nome.localeCompare(b.nome)));
+    setForm(prev => ({ ...prev, cargo_id: data.id }));
+    setNovoCargo("");
+    toast.success("Cargo cadastrado");
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome.trim() || !form.matricula.trim() || !form.id_cargo || !form.id_setor) {
-      return toast.error("Preencha matrícula, nome, cargo e setor");
+    if (!user) return;
+    if (!form.nome.trim() || !form.cpf.trim() || !form.cargo_id || !form.setor.trim()) {
+      return toast.error("Preencha nome, CPF, cargo e setor");
     }
-    const payload: Partial<Funcionario> = {
-      matricula: form.matricula.trim(),
+    const cargoNome = cargos.find(c => c.id === form.cargo_id)?.nome || "";
+    const payload = {
+      user_id: user.id,
       nome: form.nome.trim(),
-      cpf: form.cpf.trim() || null,
+      cpf: form.cpf.trim(),
+      cargo: cargoNome,
+      cargo_id: form.cargo_id,
+      setor: form.setor.trim(),
+      data_nascimento: form.data_nascimento || null,
+      data_admissao: form.data_admissao || null,
       rg: form.rg.trim() || null,
-      dataNascimento: form.dataNascimento || null,
-      dataAdmissao: form.dataAdmissao || null,
       telefone: form.telefone.trim() || null,
       email: form.email.trim() || null,
-      status: form.status,
-      id_cargo: Number(form.id_cargo),
-      id_setor: Number(form.id_setor),
     };
 
-    try {
-      if (editingId != null) {
-        const updated = await funcionariosApi.update(editingId, payload);
-        setFuncionarios(prev => prev.map(f => String(f.id) === String(editingId) ? updated : f));
-        toast.success("Funcionário atualizado");
-      } else {
-        const created = await funcionariosApi.create(payload);
-        setFuncionarios(prev => [...prev, created]
-          .sort((a, b) => a.nome.localeCompare(b.nome)));
-        toast.success("Funcionário cadastrado");
-      }
-      setDialogOpen(false);
-      setForm(empty);
-      setEditingId(null);
-    } catch (err: any) {
-      toast.error(err.message);
+    if (editingId) {
+      const { data, error } = await supabase
+        .from("funcionarios").update(payload).eq("id", editingId).select().single();
+      if (error) return toast.error(error.message);
+      setFuncionarios(prev => prev.map(f => f.id === editingId ? (data as FuncionarioRow) : f));
+      toast.success("Funcionário atualizado");
+    } else {
+      const { data, error } = await supabase
+        .from("funcionarios").insert(payload).select().single();
+      if (error) return toast.error(error.message);
+      setFuncionarios(prev => [...prev, data as FuncionarioRow]
+        .sort((a, b) => a.nome.localeCompare(b.nome)));
+      toast.success("Funcionário cadastrado");
     }
+    setDialogOpen(false);
+    setForm(empty);
+    setEditingId(null);
   };
 
-  const remove = async (id: ID) => {
-    if (!confirm("Excluir este funcionário?")) return;
-    try {
-      await funcionariosApi.remove(id);
-      setFuncionarios(prev => prev.filter(f => String(f.id) !== String(id)));
-      toast.success("Funcionário excluído");
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+  const remove = async (id: string) => {
+    if (!confirm("Excluir este funcionário? Atribuições de EPI e exames serão removidos.")) return;
+    const { error } = await supabase.from("funcionarios").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    setFuncionarios(prev => prev.filter(f => f.id !== id));
+    toast.success("Funcionário excluído");
   };
 
+  // Busca + filtro com prioridade por relevância
   const lista = useMemo(() => {
     const q = search.trim().toLowerCase();
     let arr = funcionarios.slice();
-    if (filtroCargo !== "TODOS") arr = arr.filter(f => String(f.id_cargo) === filtroCargo);
+    if (filtroCargo !== "TODOS") arr = arr.filter(f => f.cargo_id === filtroCargo);
     if (!q) return arr;
-    const score = (f: Funcionario) => {
+    const score = (f: FuncionarioRow) => {
       const n = f.nome.toLowerCase();
       if (n === q) return 0;
       if (n.startsWith(q)) return 1;
       if (n.includes(q)) return 2;
       if ((f.cpf || "").toLowerCase().includes(q)) return 3;
-      if ((f.matricula || "").toLowerCase().includes(q)) return 4;
-      if (cargoNome(f.id_cargo).toLowerCase().includes(q)) return 5;
-      if (setorNome(f.id_setor).toLowerCase().includes(q)) return 6;
+      if ((f.cargo || "").toLowerCase().includes(q)) return 4;
+      if ((f.setor || "").toLowerCase().includes(q)) return 5;
       return 99;
     };
     return arr
@@ -224,16 +193,7 @@ const Funcionarios = () => {
       .filter(x => x.s < 99)
       .sort((a, b) => a.s - b.s || a.f.nome.localeCompare(b.f.nome))
       .map(x => x.f);
-  }, [funcionarios, search, filtroCargo, cargos, setores]);
-
-  const statusBadge = (s: FuncionarioStatus) => {
-    const map: Record<string, string> = {
-      ATIVO: "bg-green-500/10 text-green-700 border-green-500/30",
-      INATIVO: "bg-gray-500/10 text-gray-700 border-gray-500/30",
-      AFASTADO: "bg-yellow-500/10 text-yellow-700 border-yellow-500/30",
-    };
-    return <Badge variant="outline" className={map[s] || ""}>{s}</Badge>;
-  };
+  }, [funcionarios, search, filtroCargo]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -259,12 +219,13 @@ const Funcionarios = () => {
           </Button>
         </div>
 
+        {/* Filtros */}
         <Card className="mb-4">
           <CardContent className="pt-6 grid md:grid-cols-3 gap-3">
             <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome, CPF, matrícula, cargo ou setor..."
+                placeholder="Buscar por nome, CPF, cargo ou setor..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="pl-10"
@@ -276,7 +237,7 @@ const Funcionarios = () => {
                 <SelectContent>
                   <SelectItem value="TODOS">Todos os cargos</SelectItem>
                   {cargos.map(c => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -301,12 +262,10 @@ const Funcionarios = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Matrícula</TableHead>
                       <TableHead>Nome</TableHead>
                       <TableHead>CPF</TableHead>
                       <TableHead>Cargo</TableHead>
                       <TableHead>Setor</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Admissão</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -314,27 +273,25 @@ const Funcionarios = () => {
                   <TableBody>
                     {lista.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                           {funcionarios.length === 0
                             ? "Nenhum funcionário cadastrado"
                             : "Nenhum resultado para os filtros aplicados"}
                         </TableCell>
                       </TableRow>
                     ) : lista.map(f => (
-                      <TableRow key={String(f.id)}>
-                        <TableCell className="text-xs font-mono">{f.matricula}</TableCell>
+                      <TableRow key={f.id}>
                         <TableCell className="font-medium">{f.nome}</TableCell>
-                        <TableCell>{f.cpf || "—"}</TableCell>
+                        <TableCell>{f.cpf}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="gap-1">
-                            <Briefcase className="h-3 w-3" />{cargoNome(f.id_cargo)}
+                            <Briefcase className="h-3 w-3" />{f.cargo || "—"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{setorNome(f.id_setor)}</TableCell>
-                        <TableCell>{statusBadge(f.status)}</TableCell>
+                        <TableCell>{f.setor || "—"}</TableCell>
                         <TableCell>
-                          {f.dataAdmissao
-                            ? format(new Date(f.dataAdmissao), "dd/MM/yyyy")
+                          {f.data_admissao
+                            ? format(new Date(f.data_admissao), "dd/MM/yyyy")
                             : "—"}
                         </TableCell>
                         <TableCell className="text-right space-x-1">
@@ -358,39 +315,26 @@ const Funcionarios = () => {
         </Card>
       </main>
 
+      {/* Dialog Cadastro/Edição */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId != null ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
+            <DialogTitle>{editingId ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Matrícula *</Label>
-                <Input value={form.matricula} onChange={e => setForm({ ...form, matricula: e.target.value })} required />
-              </div>
-              <div>
-                <Label>Status *</Label>
-                <Select value={form.status} onValueChange={(v: FuncionarioStatus) => setForm({ ...form, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ATIVO">Ativo</SelectItem>
-                    <SelectItem value="INATIVO">Inativo</SelectItem>
-                    <SelectItem value="AFASTADO">Afastado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="md:col-span-2">
                 <Label>Nome completo *</Label>
                 <Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} required />
               </div>
               <div>
-                <Label>CPF</Label>
+                <Label>CPF *</Label>
                 <Input
                   value={form.cpf}
                   onChange={e => setForm({ ...form, cpf: formatCPF(e.target.value) })}
                   placeholder="000.000.000-00"
                   maxLength={14}
+                  required
                 />
               </div>
               <div>
@@ -398,24 +342,8 @@ const Funcionarios = () => {
                 <Input value={form.rg} onChange={e => setForm({ ...form, rg: e.target.value })} />
               </div>
               <div>
-                <Label>Setor *</Label>
-                <Select value={form.id_setor} onValueChange={v => setForm({ ...form, id_setor: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um setor" /></SelectTrigger>
-                  <SelectContent>
-                    {setores.length === 0 && (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        Nenhum setor cadastrado
-                      </div>
-                    )}
-                    {setores.map(s => (
-                      <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
                 <Label>Cargo *</Label>
-                <Select value={form.id_cargo} onValueChange={v => setForm({ ...form, id_cargo: v })}>
+                <Select value={form.cargo_id} onValueChange={v => setForm({ ...form, cargo_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione um cargo" /></SelectTrigger>
                   <SelectContent>
                     {cargos.length === 0 && (
@@ -424,7 +352,7 @@ const Funcionarios = () => {
                       </div>
                     )}
                     {cargos.map(c => (
-                      <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -441,14 +369,18 @@ const Funcionarios = () => {
                 </div>
               </div>
               <div>
+                <Label>Setor *</Label>
+                <Input value={form.setor} onChange={e => setForm({ ...form, setor: e.target.value })} required />
+              </div>
+              <div>
                 <Label>Data de nascimento</Label>
-                <Input type="date" value={form.dataNascimento}
-                  onChange={e => setForm({ ...form, dataNascimento: e.target.value })} />
+                <Input type="date" value={form.data_nascimento}
+                  onChange={e => setForm({ ...form, data_nascimento: e.target.value })} />
               </div>
               <div>
                 <Label>Data de admissão</Label>
-                <Input type="date" value={form.dataAdmissao}
-                  onChange={e => setForm({ ...form, dataAdmissao: e.target.value })} />
+                <Input type="date" value={form.data_admissao}
+                  onChange={e => setForm({ ...form, data_admissao: e.target.value })} />
               </div>
               <div>
                 <Label>Telefone</Label>
@@ -462,25 +394,24 @@ const Funcionarios = () => {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit">{editingId != null ? "Salvar" : "Cadastrar"}</Button>
+              <Button type="submit">{editingId ? "Salvar" : "Cadastrar"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
+      {/* Visualização */}
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{viewing?.nome}</DialogTitle></DialogHeader>
           {viewing && (
             <div className="space-y-2 text-sm">
-              <p><strong>Matrícula:</strong> {viewing.matricula}</p>
-              <p><strong>Status:</strong> {viewing.status}</p>
-              <p><strong>CPF:</strong> {viewing.cpf || "—"}</p>
+              <p><strong>CPF:</strong> {viewing.cpf}</p>
               <p><strong>RG:</strong> {viewing.rg || "—"}</p>
-              <p><strong>Cargo:</strong> {cargoNome(viewing.id_cargo)}</p>
-              <p><strong>Setor:</strong> {setorNome(viewing.id_setor)}</p>
-              <p><strong>Nascimento:</strong> {viewing.dataNascimento ? format(new Date(viewing.dataNascimento), "dd/MM/yyyy") : "—"}</p>
-              <p><strong>Admissão:</strong> {viewing.dataAdmissao ? format(new Date(viewing.dataAdmissao), "dd/MM/yyyy") : "—"}</p>
+              <p><strong>Cargo:</strong> {viewing.cargo || "—"}</p>
+              <p><strong>Setor:</strong> {viewing.setor || "—"}</p>
+              <p><strong>Nascimento:</strong> {viewing.data_nascimento ? format(new Date(viewing.data_nascimento), "dd/MM/yyyy") : "—"}</p>
+              <p><strong>Admissão:</strong> {viewing.data_admissao ? format(new Date(viewing.data_admissao), "dd/MM/yyyy") : "—"}</p>
               <p><strong>Telefone:</strong> {viewing.telefone || "—"}</p>
               <p><strong>E-mail:</strong> {viewing.email || "—"}</p>
             </div>

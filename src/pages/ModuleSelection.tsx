@@ -61,9 +61,9 @@ const ModuleSelection = () => {
             </Card>
 
             {/* Módulo EPIs */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/epis")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-primary text-primary-foreground">
                   <HardHat className="h-8 w-8" />
                 </div>
@@ -72,8 +72,8 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">Controle completo dos seus equipamentos</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
-                Cadastre, edite e visualize EPIs, gerencie funcionários e controle as atribuições de equipamentos.
+              <p className="text-foreground/80 mb-4">
+                Cadastre EPIs, controle atribuições e validades de equipamentos.
               </p>
               <div className="space-y-2 mb-6 flex-1">
                 {["Cadastro de EPIs", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
@@ -88,9 +88,9 @@ const ModuleSelection = () => {
             </Card>
 
             {/* Módulo Segurança */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/seguranca")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
                   <ShieldAlert className="h-8 w-8" />
                 </div>
@@ -99,8 +99,8 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">Conformidade com normas regulamentadoras</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
-                Gerencie a segurança da sua empresa com eficiência e conformidade com as normas regulamentadoras.
+              <p className="text-foreground/80 mb-4">
+                Gerencie segurança com conformidade às normas regulamentadoras.
               </p>
               <div className="space-y-2 mb-6 flex-1">
                 {[
@@ -119,9 +119,9 @@ const ModuleSelection = () => {
             </Card>
 
             {/* Módulo Exame Admissional */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/exame-admissional")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
                   <Stethoscope className="h-8 w-8" />
                 </div>
@@ -130,8 +130,8 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">ASO, riscos por cargo e alertas</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
-                Cadastre cargos, riscos e exames. Gere ASO automaticamente e receba alertas de vencimento.
+              <p className="text-foreground/80 mb-4">
+                Cadastre cargos, riscos e exames. Gere ASO e receba alertas de vencimento.
               </p>
               <div className="space-y-2 mb-6 flex-1">
                 {[

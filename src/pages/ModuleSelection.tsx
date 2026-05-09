@@ -30,7 +30,7 @@ const ModuleSelection = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Módulo Cadastro de Funcionários (central) */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/funcionarios")}>
               <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
@@ -41,10 +41,10 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">Fonte única de funcionários e cargos</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
+              <p className="text-foreground/80 mb-4">
                 Cadastre funcionários e cargos uma única vez. Todos os módulos consomem esta base.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {[
                   { icon: IdCard, label: "Dados completos do colaborador" },
                   { icon: Briefcase, label: "Cargos centralizados" },

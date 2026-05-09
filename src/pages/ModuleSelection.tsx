@@ -32,7 +32,7 @@ const ModuleSelection = () => {
             {/* Módulo Cadastro de Funcionários (central) */}
             <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
               onClick={() => navigate("/funcionarios")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
                   <Users className="h-8 w-8" />
                 </div>

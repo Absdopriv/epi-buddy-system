@@ -75,7 +75,7 @@ const ModuleSelection = () => {
               <p className="text-foreground/80 mb-4">
                 Cadastre EPIs, controle atribuições e validades de equipamentos.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {["Cadastro de EPIs", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
                   <div key={t} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary" /><span>{t}</span>
@@ -102,7 +102,7 @@ const ModuleSelection = () => {
               <p className="text-foreground/80 mb-4">
                 Gerencie segurança com conformidade às normas regulamentadoras.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {[
                   { icon: FileText, label: "Formulários digitais" },
                   { icon: ClipboardList, label: "Relatórios detalhados" },
@@ -133,7 +133,7 @@ const ModuleSelection = () => {
               <p className="text-foreground/80 mb-4">
                 Cadastre cargos, riscos e exames. Gere ASO e receba alertas de vencimento.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {[
                   { icon: Activity, label: "Exames por funcionário" },
                   { icon: FileText, label: "Emissão automática de ASO" },

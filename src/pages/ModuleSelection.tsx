@@ -28,7 +28,7 @@ const ModuleSelection = () => {
             <p className="text-muted-foreground text-lg">Escolha o módulo que deseja acessar</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Módulo Cadastro de Funcionários (central) */}
             <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
               onClick={() => navigate("/funcionarios")}>

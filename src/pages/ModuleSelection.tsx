@@ -28,11 +28,11 @@ const ModuleSelection = () => {
             <p className="text-muted-foreground text-lg">Escolha o módulo que deseja acessar</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Módulo Cadastro de Funcionários (central) */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/funcionarios")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
                   <Users className="h-8 w-8" />
                 </div>
@@ -41,10 +41,10 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">Fonte única de funcionários e cargos</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
+              <p className="text-foreground/80 mb-4">
                 Cadastre funcionários e cargos uma única vez. Todos os módulos consomem esta base.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {[
                   { icon: IdCard, label: "Dados completos do colaborador" },
                   { icon: Briefcase, label: "Cargos centralizados" },
@@ -61,9 +61,9 @@ const ModuleSelection = () => {
             </Card>
 
             {/* Módulo EPIs */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/epis")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-primary text-primary-foreground">
                   <HardHat className="h-8 w-8" />
                 </div>
@@ -72,10 +72,10 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">Controle completo dos seus equipamentos</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
-                Cadastre, edite e visualize EPIs, gerencie funcionários e controle as atribuições de equipamentos.
+              <p className="text-foreground/80 mb-4">
+                Cadastre EPIs, controle atribuições e validades de equipamentos.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {["Cadastro de EPIs", "Atribuição de equipamentos", "Controle de validade e CA"].map(t => (
                   <div key={t} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4 text-primary" /><span>{t}</span>
@@ -88,9 +88,9 @@ const ModuleSelection = () => {
             </Card>
 
             {/* Módulo Segurança */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/seguranca")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
                   <ShieldAlert className="h-8 w-8" />
                 </div>
@@ -99,10 +99,10 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">Conformidade com normas regulamentadoras</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
-                Gerencie a segurança da sua empresa com eficiência e conformidade com as normas regulamentadoras.
+              <p className="text-foreground/80 mb-4">
+                Gerencie segurança com conformidade às normas regulamentadoras.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {[
                   { icon: FileText, label: "Formulários digitais" },
                   { icon: ClipboardList, label: "Relatórios detalhados" },
@@ -119,9 +119,9 @@ const ModuleSelection = () => {
             </Card>
 
             {/* Módulo Exame Admissional */}
-            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col"
+            <Card className="group p-8 hover:shadow-lg transition-all border-2 hover:border-primary/40 cursor-pointer flex flex-col h-full"
               onClick={() => navigate("/exame-admissional")}>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-4 mb-4">
                 <div className="p-3 rounded-xl bg-gradient-to-br from-[#2c3e50] to-[#4a69bd] text-primary-foreground">
                   <Stethoscope className="h-8 w-8" />
                 </div>
@@ -130,10 +130,10 @@ const ModuleSelection = () => {
                   <p className="text-sm text-muted-foreground">ASO, riscos por cargo e alertas</p>
                 </div>
               </div>
-              <p className="text-foreground/80 mb-6">
-                Cadastre cargos, riscos e exames. Gere ASO automaticamente e receba alertas de vencimento.
+              <p className="text-foreground/80 mb-4">
+                Cadastre cargos, riscos e exames. Gere ASO e receba alertas de vencimento.
               </p>
-              <div className="space-y-2 mb-6 flex-1">
+              <div className="space-y-2 mb-4">
                 {[
                   { icon: Activity, label: "Exames por funcionário" },
                   { icon: FileText, label: "Emissão automática de ASO" },

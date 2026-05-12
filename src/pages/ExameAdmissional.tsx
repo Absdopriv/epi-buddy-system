@@ -18,13 +18,14 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format, addMonths, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { generateASOPdf } from "@/lib/asoPdf";
+import * as api from "@/lib/admissionalApi";
+import type { BkCargo, BkRisco, BkExameOcupacional, BkFuncionario, BkExameFuncionario, BkAlerta } from "@/lib/admissionalApi";
 
+// ---- frontend display types ----
 type Cargo = { id: string; nome: string; descricao: string | null };
 type Risco = { id: string; descricao: string; nivel: string; tipo: string | null };
 type ExameOcup = { id: string; nome: string; tipo: string; periodicidade_meses: number };
@@ -41,13 +42,64 @@ type Alerta = {
   mensagem: string | null; resolvido: boolean; created_at: string;
 };
 
+// ---- mappers backend → frontend ----
+function mapCargo(b: BkCargo): Cargo {
+  return { id: String(b.id), nome: b.nome, descricao: b.descricaoAtividades || null };
+}
+function mapRisco(b: BkRisco): Risco {
+  return { id: String(b.id), descricao: b.descricao, nivel: b.nivel, tipo: b.tipo || null };
+}
+function mapExame(b: BkExameOcupacional): ExameOcup {
+  return { id: String(b.id), nome: b.nome, tipo: b.tipo, periodicidade_meses: b.periodicidadeMeses };
+}
+function mapFuncionario(b: BkFuncionario, cargos: BkCargo[]): Funcionario {
+  const cargo = cargos.find(c => c.id === b.id_cargo);
+  return {
+    id: String(b.id),
+    nome: b.nome,
+    cpf: b.matricula,
+    cargo: cargo?.nome || "",
+    setor: "",
+    cargo_id: b.id_cargo ? String(b.id_cargo) : null,
+    data_admissao: b.dataAdmissao || null,
+  };
+}
+function mapExameFunc(b: BkExameFuncionario): ExameFunc {
+  return {
+    id: String(b.id),
+    funcionario_id: String(b.id_funcionario),
+    exame_id: String(b.id_exame_ocupacional),
+    tipo_exame: b.tipo_exame || "Admissional",
+    data_realizacao: b.dataRealizacao || null,
+    data_vencimento: b.dataVencimento || null,
+    resultado: b.resultado || null,
+    situacao: b.situacao || "PENDENTE",
+    medico_responsavel: b.medicoResponsavel || null,
+    crm_medico: b.crmMedico || null,
+    observacoes: b.observacoes || null,
+  };
+}
+function mapAlerta(b: BkAlerta): Alerta {
+  return {
+    id: String(b.id),
+    funcionario_id: b.id_funcionario ? String(b.id_funcionario) : null,
+    exame_funcionario_id: null,
+    data_vencimento: b.dataVencimento || null,
+    dias_para_vencer: b.diasParaVencer ?? null,
+    nivel: b.nivel,
+    mensagem: b.mensagem ?? null,
+    resolvido: Boolean(b.resolvido),
+    created_at: new Date().toISOString(),
+  };
+}
+
 const fmt = (d?: string | null) => (d ? format(new Date(d), "dd/MM/yyyy", { locale: ptBR }) : "—");
 
 const ExameAdmissional = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [empresaNome, setEmpresaNome] = useState("Sua Empresa");
 
+  // display state
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [riscos, setRiscos] = useState<Risco[]>([]);
   const [exames, setExames] = useState<ExameOcup[]>([]);
@@ -57,6 +109,12 @@ const ExameAdmissional = () => {
   const [examesFunc, setExamesFunc] = useState<ExameFunc[]>([]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [empresa, setEmpresa] = useState<{ razao_social: string | null; cnpj: string | null }>({ razao_social: null, cnpj: null });
+
+  // raw backend state (needed for full-object PUT calls)
+  const [bkRiscos, setBkRiscos] = useState<BkRisco[]>([]);
+  const [bkExames, setBkExames] = useState<BkExameOcupacional[]>([]);
+  const [bkFuncionarios, setBkFuncionarios] = useState<BkFuncionario[]>([]);
+  const [bkCargos, setBkCargos] = useState<BkCargo[]>([]);
 
   // forms
   const [novoCargo, setNovoCargo] = useState({ nome: "", descricao: "" });
@@ -68,7 +126,6 @@ const ExameAdmissional = () => {
   const [vincRiscoEx, setVincRiscoEx] = useState<string>("");
   const [vincExameEx, setVincExameEx] = useState<string>("");
 
-  // Adicionar risco a funcionário (na aba Exames)
   const [funcSelecionado, setFuncSelecionado] = useState<string>("");
   const [riscoParaFunc, setRiscoParaFunc] = useState<string>("");
 
@@ -76,187 +133,236 @@ const ExameAdmissional = () => {
   const [registrar, setRegistrar] = useState<ExameFunc | null>(null);
   const [regForm, setRegForm] = useState({ data_realizacao: "", resultado: "APTO", medico_responsavel: "", crm_medico: "", observacoes: "" });
 
-  const fetchAll = async () => {
-    if (!user) return;
-    const [pf, c, r, ex, cr, re, fn, ef, al] = await Promise.all([
-      supabase.from("profiles").select("razao_social,cnpj").eq("user_id", user.id).maybeSingle(),
-      supabase.from("cargos").select("*").order("nome"),
-      supabase.from("riscos_ocupacionais").select("*").order("descricao"),
-      supabase.from("exames_ocupacionais").select("*").order("nome"),
-      supabase.from("cargo_riscos").select("cargo_id,risco_id"),
-      supabase.from("risco_exames").select("risco_id,exame_id"),
-      supabase.from("funcionarios").select("*").order("nome"),
-      supabase.from("exames_funcionario").select("*").order("created_at", { ascending: false }),
-      supabase.from("alertas").select("*").order("created_at", { ascending: false }),
-    ]);
-    if (pf.data) { setEmpresa(pf.data); setEmpresaNome(pf.data.razao_social || "Sua Empresa"); }
-    setCargos(c.data || []);
-    setRiscos(r.data || []);
-    setExames(ex.data || []);
-    setCargoRiscos(cr.data || []);
-    setRiscoExames(re.data || []);
-    setFuncionarios((fn.data || []) as Funcionario[]);
-    setExamesFunc((ef.data || []) as ExameFunc[]);
-    setAlertas((al.data || []) as Alerta[]);
+  // helpers para derivar joins a partir das FKs do backend
+  const deriveJoins = (bkR: BkRisco[], bkE: BkExameOcupacional[]) => {
+    const cr = bkR
+      .filter(r => r.id_cargo != null)
+      .map(r => ({ cargo_id: String(r.id_cargo), risco_id: String(r.id) }));
+    const re = bkE
+      .filter(e => e.id_risco_ocupacional != null)
+      .map(e => ({ risco_id: String(e.id_risco_ocupacional), exame_id: String(e.id) }));
+    return { cr, re };
   };
 
-  useEffect(() => { fetchAll(); /* eslint-disable-next-line */ }, [user]);
+  const fetchAll = async () => {
+    try {
+      const [empresas, bkC, bkR, bkE, bkF, bkEF, bkAl] = await Promise.all([
+        api.listarEmpresas(),
+        api.listarCargos(),
+        api.listarRiscos(),
+        api.listarExamesOcupacionais(),
+        api.listarFuncionarios(),
+        api.listarExamesFuncionario(),
+        api.listarAlertas(),
+      ]);
 
-  // --- recalcular alertas automáticos
+      const emp = empresas[0];
+      if (emp) {
+        setEmpresa({ razao_social: emp.razaoSocial, cnpj: emp.cnpj });
+        setEmpresaNome(emp.razaoSocial || "Sua Empresa");
+      }
+
+      setBkCargos(bkC);
+      setBkRiscos(bkR);
+      setBkExames(bkE);
+      setBkFuncionarios(bkF);
+
+      setCargos(bkC.map(mapCargo));
+      setRiscos(bkR.map(mapRisco));
+      setExames(bkE.map(mapExame));
+      setFuncionarios(bkF.map(f => mapFuncionario(f, bkC)));
+      setExamesFunc(bkEF.map(mapExameFunc));
+      setAlertas(bkAl.map(mapAlerta));
+
+      const { cr, re } = deriveJoins(bkR, bkE);
+      setCargoRiscos(cr);
+      setRiscoExames(re);
+    } catch (err) {
+      toast.error("Erro ao conectar com o servidor. Verifique se o backend está rodando na porta 3000.");
+    }
+  };
+
+  useEffect(() => { fetchAll(); /* eslint-disable-next-line */ }, []);
+
+  // auto-alertas para exames vencidos/pendentes
   useEffect(() => {
-    if (!user || examesFunc.length === 0) return;
+    if (examesFunc.length === 0) return;
     (async () => {
       const hoje = new Date();
-      const novosAlertas: any[] = [];
       for (const e of examesFunc) {
-        let nivel = ""; let mensagem = ""; let dias: number | null = null;
+        let nivel = ""; let mensagem = ""; let dias = 0;
         if (e.situacao === "PENDENTE") {
-          nivel = "WARN";
-          mensagem = "Exame admissional pendente";
+          nivel = "WARN"; mensagem = "Exame admissional pendente";
         } else if (e.data_vencimento) {
           dias = differenceInDays(new Date(e.data_vencimento), hoje);
           if (dias < 0) { nivel = "CRITICO"; mensagem = `Exame vencido há ${Math.abs(dias)} dias`; }
           else if (dias <= 30) { nivel = "WARN"; mensagem = `Exame vence em ${dias} dias`; }
         }
         if (nivel) {
-          const existe = alertas.find(a => a.exame_funcionario_id === e.id && !a.resolvido);
-          if (!existe) {
-            novosAlertas.push({
-              user_id: user.id,
-              funcionario_id: e.funcionario_id,
-              exame_funcionario_id: e.id,
-              exame_ocupacional_id: e.exame_id,
-              data_vencimento: e.data_vencimento,
-              dias_para_vencer: dias,
-              nivel, mensagem, resolvido: false,
-            });
+          const jaTem = alertas.some(
+            a => a.funcionario_id === e.funcionario_id && !a.resolvido &&
+              a.mensagem === mensagem
+          );
+          if (!jaTem) {
+            try {
+              const novoAl = await api.criarAlerta({
+                dataVencimento: e.data_vencimento || new Date().toISOString().split("T")[0],
+                diasParaVencer: dias,
+                nivel,
+                id_funcionario: parseInt(e.funcionario_id),
+                id_exame_ocupacional: parseInt(e.exame_id),
+                mensagem,
+              });
+              setAlertas(prev => [mapAlerta(novoAl), ...prev]);
+            } catch (_) { /* ignore duplicate alert errors */ }
           }
         }
-      }
-      if (novosAlertas.length > 0) {
-        await supabase.from("alertas").insert(novosAlertas);
-        const { data } = await supabase.from("alertas").select("*").order("created_at", { ascending: false });
-        setAlertas((data || []) as Alerta[]);
       }
     })();
     // eslint-disable-next-line
   }, [examesFunc.length]);
 
-  const audit = async (tabela: string, registro_id: string, acao: string, antes: any, depois: any) => {
-    if (!user) return;
-    await supabase.from("auditoria").insert({ user_id: user.id, tabela, registro_id, acao, dados_antes: antes, dados_depois: depois });
-  };
-
-  // --- CRUD catálogos
+  // ---- CRUD cargos ----
   const addCargo = async () => {
-    if (!user || !novoCargo.nome.trim()) return;
-    const { data, error } = await supabase.from("cargos").insert({ user_id: user.id, ...novoCargo }).select().single();
-    if (error) return toast.error(error.message);
-    toast.success("Cargo cadastrado");
-    setNovoCargo({ nome: "", descricao: "" });
-    setCargos([...cargos, data as Cargo]);
-    audit("cargos", data.id, "CREATE", null, data);
+    if (!novoCargo.nome.trim()) return;
+    try {
+      const data = await api.criarCargo({ nome: novoCargo.nome, descricao: novoCargo.descricao });
+      setBkCargos(prev => [...prev, data]);
+      setCargos(prev => [...prev, mapCargo(data)]);
+      setNovoCargo({ nome: "", descricao: "" });
+      toast.success("Cargo cadastrado");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao criar cargo"); }
   };
   const delCargo = async (id: string) => {
-    const antes = cargos.find(c => c.id === id);
-    const { error } = await supabase.from("cargos").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setCargos(cargos.filter(c => c.id !== id));
-    audit("cargos", id, "DELETE", antes, null);
-    toast.success("Removido");
+    try {
+      await api.deletarCargo(parseInt(id));
+      setBkCargos(prev => prev.filter(c => String(c.id) !== id));
+      setCargos(prev => prev.filter(c => c.id !== id));
+      toast.success("Removido");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao remover cargo"); }
   };
 
+  // ---- CRUD riscos ----
   const addRisco = async () => {
-    if (!user || !novoRisco.descricao.trim()) return;
-    const { data, error } = await supabase.from("riscos_ocupacionais").insert({ user_id: user.id, ...novoRisco }).select().single();
-    if (error) return toast.error(error.message);
-    setRiscos([...riscos, data as Risco]);
-    setNovoRisco({ descricao: "", nivel: "medio", tipo: "" });
-    audit("riscos_ocupacionais", data.id, "CREATE", null, data);
-    toast.success("Risco cadastrado");
+    if (!novoRisco.descricao.trim()) return;
+    try {
+      const data = await api.criarRisco({ descricao: novoRisco.descricao, nivel: novoRisco.nivel, tipo: novoRisco.tipo });
+      setBkRiscos(prev => { const next = [...prev, data]; const { cr } = deriveJoins(next, bkExames); setCargoRiscos(cr); return next; });
+      setRiscos(prev => [...prev, mapRisco(data)]);
+      setNovoRisco({ descricao: "", nivel: "medio", tipo: "" });
+      toast.success("Risco cadastrado");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao criar risco"); }
   };
   const delRisco = async (id: string) => {
-    const antes = riscos.find(r => r.id === id);
-    const { error } = await supabase.from("riscos_ocupacionais").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setRiscos(riscos.filter(r => r.id !== id));
-    audit("riscos_ocupacionais", id, "DELETE", antes, null);
+    try {
+      await api.deletarRisco(parseInt(id));
+      setBkRiscos(prev => { const next = prev.filter(r => String(r.id) !== id); const { cr } = deriveJoins(next, bkExames); setCargoRiscos(cr); return next; });
+      setRiscos(prev => prev.filter(r => r.id !== id));
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao remover risco"); }
   };
 
+  // ---- CRUD exames ocupacionais ----
   const addExame = async () => {
-    if (!user || !novoExame.nome.trim()) return;
-    const { data, error } = await supabase.from("exames_ocupacionais").insert({ user_id: user.id, ...novoExame }).select().single();
-    if (error) return toast.error(error.message);
-    setExames([...exames, data as ExameOcup]);
-    setNovoExame({ nome: "", tipo: "Clínico", periodicidade_meses: 12 });
-    audit("exames_ocupacionais", data.id, "CREATE", null, data);
-    toast.success("Exame cadastrado");
+    if (!novoExame.nome.trim()) return;
+    try {
+      const data = await api.criarExameOcupacional({ nome: novoExame.nome, tipo: novoExame.tipo, periodicidade_meses: novoExame.periodicidade_meses });
+      setBkExames(prev => { const next = [...prev, data]; const { re } = deriveJoins(bkRiscos, next); setRiscoExames(re); return next; });
+      setExames(prev => [...prev, mapExame(data)]);
+      setNovoExame({ nome: "", tipo: "Clínico", periodicidade_meses: 12 });
+      toast.success("Exame cadastrado");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao criar exame"); }
   };
   const delExame = async (id: string) => {
-    const antes = exames.find(e => e.id === id);
-    const { error } = await supabase.from("exames_ocupacionais").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setExames(exames.filter(e => e.id !== id));
-    audit("exames_ocupacionais", id, "DELETE", antes, null);
+    try {
+      await api.deletarExameOcupacional(parseInt(id));
+      setBkExames(prev => { const next = prev.filter(e => String(e.id) !== id); const { re } = deriveJoins(bkRiscos, next); setRiscoExames(re); return next; });
+      setExames(prev => prev.filter(e => e.id !== id));
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao remover exame"); }
   };
 
-  // vínculos
+  // ---- Vincular cargo ↔ risco (atualiza FK id_cargo no risco) ----
   const vincularCargoRisco = async () => {
-    if (!user || !vincCargo || !vincRisco) return;
-    const { error } = await supabase.from("cargo_riscos").insert({ user_id: user.id, cargo_id: vincCargo, risco_id: vincRisco });
-    if (error) return toast.error(error.message);
-    setCargoRiscos([...cargoRiscos, { cargo_id: vincCargo, risco_id: vincRisco }]);
-    toast.success("Risco vinculado ao cargo");
-  };
-  const vincularRiscoExame = async () => {
-    if (!user || !vincRiscoEx || !vincExameEx) return;
-    const { error } = await supabase.from("risco_exames").insert({ user_id: user.id, risco_id: vincRiscoEx, exame_id: vincExameEx });
-    if (error) return toast.error(error.message);
-    setRiscoExames([...riscoExames, { risco_id: vincRiscoEx, exame_id: vincExameEx }]);
-    toast.success("Exame vinculado ao risco");
+    if (!vincCargo || !vincRisco) return;
+    const bkR = bkRiscos.find(r => String(r.id) === vincRisco);
+    if (!bkR) return;
+    try {
+      await api.atualizarRisco(bkR.id, { ...bkR, id_cargo: parseInt(vincCargo) });
+      const atualizados = await api.listarRiscos();
+      setBkRiscos(atualizados);
+      setRiscos(atualizados.map(mapRisco));
+      const { cr } = deriveJoins(atualizados, bkExames);
+      setCargoRiscos(cr);
+      toast.success("Risco vinculado ao cargo");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao vincular"); }
   };
 
-  // Adiciona risco ao cargo do funcionário e gera exames pendentes para ele
+  // ---- Vincular risco ↔ exame (atualiza FK id_risco_ocupacional no exame) ----
+  const vincularRiscoExame = async () => {
+    if (!vincRiscoEx || !vincExameEx) return;
+    const bkE = bkExames.find(e => String(e.id) === vincExameEx);
+    if (!bkE) return;
+    try {
+      await api.atualizarExameOcupacional(bkE.id, { ...bkE, id_risco_ocupacional: parseInt(vincRiscoEx) });
+      const atualizados = await api.listarExamesOcupacionais();
+      setBkExames(atualizados);
+      setExames(atualizados.map(mapExame));
+      const { re } = deriveJoins(bkRiscos, atualizados);
+      setRiscoExames(re);
+      toast.success("Exame vinculado ao risco");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao vincular"); }
+  };
+
+  // ---- Adicionar risco ao funcionário → gera exames pendentes ----
   const adicionarRiscoAoFuncionario = async () => {
-    if (!user || !funcSelecionado || !riscoParaFunc) return;
+    if (!funcSelecionado || !riscoParaFunc) return;
     const f = funcionarios.find(x => x.id === funcSelecionado);
     if (!f?.cargo_id) return toast.error("Funcionário sem cargo. Edite no módulo Cadastro de Funcionários.");
 
-    // 1. vincula risco ao cargo (se ainda não)
-    const jaVinc = cargoRiscos.some(cr => cr.cargo_id === f.cargo_id && cr.risco_id === riscoParaFunc);
-    if (!jaVinc) {
-      const { error } = await supabase.from("cargo_riscos").insert({
-        user_id: user.id, cargo_id: f.cargo_id, risco_id: riscoParaFunc,
-      });
-      if (error) return toast.error(error.message);
-      setCargoRiscos([...cargoRiscos, { cargo_id: f.cargo_id, risco_id: riscoParaFunc }]);
+    // vincular o risco ao cargo do funcionário (se ainda não)
+    const bkR = bkRiscos.find(r => String(r.id) === riscoParaFunc);
+    if (bkR && String(bkR.id_cargo) !== f.cargo_id) {
+      try {
+        await api.atualizarRisco(bkR.id, { ...bkR, id_cargo: parseInt(f.cargo_id) });
+        const atualizados = await api.listarRiscos();
+        setBkRiscos(atualizados);
+        setRiscos(atualizados.map(mapRisco));
+        const { cr } = deriveJoins(atualizados, bkExames);
+        setCargoRiscos(cr);
+      } catch (_) { /* ignore */ }
     }
 
-    // 2. exames obrigatórios deste risco
-    const exameIds = riscoExames.filter(re => re.risco_id === riscoParaFunc).map(re => re.exame_id);
+    // exames obrigatórios deste risco
+    const exameIds = bkExames
+      .filter(e => String(e.id_risco_ocupacional) === riscoParaFunc)
+      .map(e => e.id);
+
     if (exameIds.length === 0) {
       toast.warning("Risco sem exames vinculados. Vincule exames ao risco na aba Riscos.");
       return;
     }
 
-    // 3. cria exames pendentes que ainda não existem para este funcionário
     const existentes = new Set(examesFunc.filter(e => e.funcionario_id === f.id).map(e => e.exame_id));
-    const novos = exameIds.filter(id => !existentes.has(id)).map(exame_id => ({
-      user_id: user.id, funcionario_id: f.id, exame_id,
-      tipo_exame: "Admissional", situacao: "PENDENTE",
-    }));
-    if (novos.length === 0) {
-      toast.info("Todos os exames deste risco já estão atribuídos");
-      return;
-    }
-    const { data, error } = await supabase.from("exames_funcionario").insert(novos).select();
-    if (error) return toast.error(error.message);
-    setExamesFunc([...(data as ExameFunc[]), ...examesFunc]);
-    setRiscoParaFunc("");
-    toast.success(`${novos.length} exame(s) vinculados a ${f.nome}`);
+    const novosIds = exameIds.filter(id => !existentes.has(String(id)));
+    if (novosIds.length === 0) { toast.info("Todos os exames deste risco já estão atribuídos"); return; }
+
+    try {
+      const criados = await Promise.all(
+        novosIds.map(exame_id =>
+          api.criarExameFuncionario({
+            id_funcionario: parseInt(f.id),
+            id_exame_ocupacional: exame_id,
+            tipo_exame: "Admissional",
+            situacao: "PENDENTE",
+          })
+        )
+      );
+      setExamesFunc(prev => [...criados.map(mapExameFunc), ...prev]);
+      setRiscoParaFunc("");
+      toast.success(`${criados.length} exame(s) vinculados a ${f.nome}`);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao vincular exames"); }
   };
 
-  // --- Registrar exame realizado
+  // ---- Registrar exame realizado ----
   const abrirRegistrar = (e: ExameFunc) => {
     setRegistrar(e);
     setRegForm({
@@ -269,41 +375,45 @@ const ExameAdmissional = () => {
   };
 
   const confirmarRegistro = async () => {
-    if (!registrar || !user) return;
-    const exame = exames.find(x => x.id === registrar.exame_id);
-    const periodicidade = exame?.periodicidade_meses || 12;
+    if (!registrar) return;
+    const exameOcup = exames.find(x => x.id === registrar.exame_id);
+    const periodicidade = exameOcup?.periodicidade_meses || 12;
     const dataReal = new Date(regForm.data_realizacao);
     const venc = addMonths(dataReal, periodicidade);
-    const update = {
-      data_realizacao: regForm.data_realizacao,
-      data_vencimento: format(venc, "yyyy-MM-dd"),
-      resultado: regForm.resultado,
-      situacao: "CONCLUIDO",
-      medico_responsavel: regForm.medico_responsavel,
-      crm_medico: regForm.crm_medico,
-      observacoes: regForm.observacoes,
-    };
-    const { data, error } = await supabase.from("exames_funcionario").update(update).eq("id", registrar.id).select().single();
-    if (error) return toast.error(error.message);
-    setExamesFunc(examesFunc.map(e => e.id === registrar.id ? data as ExameFunc : e));
-    audit("exame_funcionario", registrar.id, "UPDATE", registrar, data);
-    toast.success("Exame registrado e vencimento calculado");
-    setRegistrar(null);
+    try {
+      await api.atualizarExameFuncionario(parseInt(registrar.id), {
+        dataRealizacao: regForm.data_realizacao,
+        dataVencimento: format(venc, "yyyy-MM-dd"),
+        resultado: regForm.resultado,
+        situacao: "CONCLUIDO",
+        medicoResponsavel: regForm.medico_responsavel,
+        crmMedico: regForm.crm_medico,
+        observacoes: regForm.observacoes,
+        id_funcionario: parseInt(registrar.funcionario_id),
+        id_exame_ocupacional: parseInt(registrar.exame_id),
+        tipo_exame: registrar.tipo_exame,
+      });
+      setExamesFunc(prev => prev.map(e =>
+        e.id === registrar.id
+          ? { ...e, data_realizacao: regForm.data_realizacao, data_vencimento: format(venc, "yyyy-MM-dd"), resultado: regForm.resultado, situacao: "CONCLUIDO", medico_responsavel: regForm.medico_responsavel, crm_medico: regForm.crm_medico, observacoes: regForm.observacoes }
+          : e
+      ));
+      toast.success("Exame registrado e vencimento calculado");
+      setRegistrar(null);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao registrar exame"); }
   };
 
   const excluirExame = async (id: string) => {
-    if (!confirm("Remover este exame? Será registrado em auditoria.")) return;
-    const antes = examesFunc.find(e => e.id === id);
-    const { error } = await supabase.from("exames_funcionario").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setExamesFunc(examesFunc.filter(e => e.id !== id));
-    audit("exame_funcionario", id, "DELETE", antes, null);
-    toast.success("Exame removido");
+    if (!confirm("Remover este exame?")) return;
+    try {
+      await api.deletarExameFuncionario(parseInt(id));
+      setExamesFunc(prev => prev.filter(e => e.id !== id));
+      toast.success("Exame removido");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao remover exame"); }
   };
 
-  // --- Emitir ASO
+  // ---- Emitir ASO ----
   const emitirASO = async (funcionarioId: string) => {
-    if (!user) return;
     const f = funcionarios.find(x => x.id === funcionarioId);
     if (!f) return;
     const examesDoFunc = examesFunc.filter(e => e.funcionario_id === funcionarioId && e.tipo_exame === "Admissional");
@@ -316,44 +426,51 @@ const ExameAdmissional = () => {
     const proximaData = examesDoFunc
       .map(e => e.data_vencimento ? new Date(e.data_vencimento) : null)
       .filter((d): d is Date => !!d)
-      .sort((a, b) => a.getTime() - b.getTime())[0];
+      .sort((a, b) => a.getTime() - b.getTime())[0] || addMonths(new Date(), 12);
     const medico = examesDoFunc.find(e => e.medico_responsavel)?.medico_responsavel || "";
     const crm = examesDoFunc.find(e => e.crm_medico)?.crm_medico || "";
 
-    const novoAso = {
-      user_id: user.id,
-      funcionario_id: funcionarioId,
-      tipo_exame: "Admissional",
-      data_emissao: format(new Date(), "yyyy-MM-dd"),
-      aptidao,
-      restricoes: inaptos.map(i => i.observacoes).filter(Boolean).join("; ") || null,
-      proximo_aso: proximaData ? format(proximaData, "yyyy-MM-dd") : null,
-      medico_responsavel: medico,
-      crm_medico: crm,
-    };
-    const { data, error } = await supabase.from("asos").insert(novoAso).select().single();
-    if (error) return toast.error(error.message);
-    audit("asos", data.id, "CREATE", null, data);
+    try {
+      await api.criarASO({
+        dataEmissao: format(new Date(), "yyyy-MM-dd"),
+        tipoExame: "Admissional",
+        aptidao,
+        restricao: inaptos.map(i => i.observacoes).filter(Boolean).join("; ") || "",
+        proximoASO: format(proximaData, "yyyy-MM-dd"),
+        medicoResponsavel: medico,
+        crmMedico: crm,
+        id_funcionario: parseInt(funcionarioId),
+      });
 
-    generateASOPdf({
-      empresa,
-      funcionario: { ...f },
-      aso: novoAso,
-      exames: examesDoFunc.map(ef => {
-        const cat = exames.find(x => x.id === ef.exame_id);
-        return { nome: cat?.nome || "—", tipo: cat?.tipo || "—", data_realizacao: ef.data_realizacao, resultado: ef.resultado };
-      }),
-    });
-    toast.success("ASO emitido e PDF gerado");
+      generateASOPdf({
+        empresa,
+        funcionario: { ...f },
+        aso: {
+          tipo_exame: "Admissional",
+          data_emissao: format(new Date(), "yyyy-MM-dd"),
+          aptidao,
+          proximo_aso: format(proximaData, "yyyy-MM-dd"),
+          medico_responsavel: medico,
+          crm_medico: crm,
+          restricoes: null,
+        },
+        exames: examesDoFunc.map(ef => {
+          const cat = exames.find(x => x.id === ef.exame_id);
+          return { nome: cat?.nome || "—", tipo: cat?.tipo || "—", data_realizacao: ef.data_realizacao, resultado: ef.resultado };
+        }),
+      });
+      toast.success("ASO emitido e PDF gerado");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao emitir ASO"); }
   };
 
   const resolverAlerta = async (id: string) => {
-    const { error } = await supabase.from("alertas").update({ resolvido: true }).eq("id", id);
-    if (error) return toast.error(error.message);
-    setAlertas(alertas.map(a => a.id === id ? { ...a, resolvido: true } : a));
+    try {
+      await api.resolverAlerta(parseInt(id));
+      setAlertas(prev => prev.map(a => a.id === id ? { ...a, resolvido: true } : a));
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Erro ao resolver alerta"); }
   };
 
-  // --- filtros
+  // ---- filtros ----
   const examesFiltrados = useMemo(() => {
     return examesFunc.filter(e => {
       const f = funcionarios.find(x => x.id === e.funcionario_id);
@@ -377,14 +494,13 @@ const ExameAdmissional = () => {
 
   const alertasAtivos = alertas.filter(a => !a.resolvido);
 
-  // ===== KPIs do Dashboard =====
+  // ---- KPIs Dashboard ----
   type Prio = { funcionario: Funcionario; ef: ExameFunc; cat?: ExameOcup; risco?: Risco; status: "VENCIDO" | "PROXIMO" | "EM_DIA" | "PENDENTE"; dias: number | null };
   const hoje = new Date();
   const linhas: Prio[] = examesFunc.map(ef => {
     const f = funcionarios.find(x => x.id === ef.funcionario_id);
     if (!f) return null as any;
     const cat = exames.find(x => x.id === ef.exame_id);
-    // descobrir um risco associado via cargo->risco->exame
     const riscoIdsDoCargo = cargoRiscos.filter(cr => cr.cargo_id === f.cargo_id).map(cr => cr.risco_id);
     const riscoMatch = riscoExames.find(re => re.exame_id === ef.exame_id && riscoIdsDoCargo.includes(re.risco_id));
     const risco = riscoMatch ? riscos.find(r => r.id === riscoMatch.risco_id) : undefined;
@@ -409,13 +525,11 @@ const ExameAdmissional = () => {
   const funcionariosInaptos = new Set(linhas.filter(l => l.status === "VENCIDO").map(l => l.funcionario.id)).size;
   const funcionariosAptos = funcAtivos - funcionariosInaptos;
 
-  // Setores agregados
   const porSetor = funcionarios.reduce<Record<string, number>>((acc, f) => {
     const k = (f.setor || "Sem setor").trim() || "Sem setor";
     acc[k] = (acc[k] || 0) + 1; return acc;
   }, {});
 
-  // Lista de prioridades: vencidos primeiro, depois próximos, depois pendentes
   const prioridades = [...linhas].sort((a, b) => {
     const order = { VENCIDO: 0, PROXIMO: 1, PENDENTE: 2, EM_DIA: 3 };
     if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
@@ -476,7 +590,6 @@ const ExameAdmissional = () => {
     toast.success("Relatório PCMSO gerado");
   };
 
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar empresaNome={empresaNome} />
@@ -507,7 +620,6 @@ const ExameAdmissional = () => {
 
           {/* ===== DASHBOARD ===== */}
           <TabsContent value="dashboard" className="space-y-6">
-            {/* KPI cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <button onClick={() => irParaExames("TODOS")} className="text-left">
                 <Card className="p-5 border-l-4 border-l-primary hover:shadow-md transition-shadow h-full">
@@ -567,7 +679,6 @@ const ExameAdmissional = () => {
               </button>
             </div>
 
-            {/* Lista de prioridades */}
             <Card className="p-0 overflow-hidden">
               <div className="p-4 border-b bg-muted/30">
                 <h3 className="font-semibold flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" />Monitoramento de Exames e Riscos — Lista de Prioridades (GRO/PGR)</h3>
@@ -625,7 +736,6 @@ const ExameAdmissional = () => {
               </Table>
             </Card>
 
-            {/* Aptidão geral + ações */}
             <div className="grid lg:grid-cols-3 gap-4">
               <Card className="p-5 lg:col-span-2">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary" />Situação Geral de Aptidão na Empresa</h3>
@@ -654,7 +764,6 @@ const ExameAdmissional = () => {
 
           {/* ===== EXAMES DOS FUNCIONÁRIOS ===== */}
           <TabsContent value="exames" className="space-y-4">
-            {/* Adicionar risco ao funcionário */}
             <Card className="p-4 border-l-4 border-l-primary">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Users className="h-4 w-4" /> Adicionar risco ocupacional ao funcionário
@@ -702,7 +811,6 @@ const ExameAdmissional = () => {
                 );
               })()}
             </Card>
-
 
             <Card className="p-4">
               <div className="grid md:grid-cols-4 gap-3">
@@ -797,7 +905,7 @@ const ExameAdmissional = () => {
             )}
             {alertasAtivos.map(a => {
               const f = funcionarios.find(x => x.id === a.funcionario_id);
-              const ef = examesFunc.find(x => x.id === a.exame_funcionario_id);
+              const ef = examesFunc.find(x => x.funcionario_id === a.funcionario_id);
               const cat = exames.find(x => x.id === ef?.exame_id);
               const color = a.nivel === "CRITICO" ? "border-red-500/40 bg-red-500/5" : "border-yellow-500/40 bg-yellow-500/5";
               return (
@@ -808,7 +916,7 @@ const ExameAdmissional = () => {
                       <p className="font-semibold">{f?.nome || "Funcionário"} — {cat?.nome || "Exame"}</p>
                       <p className="text-sm text-muted-foreground">{a.mensagem}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Vencimento: {fmt(a.data_vencimento)} • {format(new Date(a.created_at), "dd/MM HH:mm")}
+                        Vencimento: {fmt(a.data_vencimento)}
                       </p>
                     </div>
                   </div>
@@ -818,13 +926,14 @@ const ExameAdmissional = () => {
             })}
           </TabsContent>
 
+          {/* ===== RISCOS ===== */}
           <TabsContent value="riscos" className="space-y-4">
             <Card className="p-4">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Briefcase className="h-4 w-4" />Vincular risco a cargo
               </h3>
               <p className="text-xs text-muted-foreground mb-3">
-                Cargos são gerenciados no módulo "Cadastro de Funcionários".
+                Selecione um risco existente e o cargo ao qual ele pertence.
               </p>
               <div className="grid md:grid-cols-3 gap-3">
                 <Select value={vincCargo} onValueChange={setVincCargo}>
@@ -864,9 +973,9 @@ const ExameAdmissional = () => {
                 <Select value={novoRisco.nivel} onValueChange={v => setNovoRisco({ ...novoRisco, nivel: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="leve">Leve</SelectItem>
-                    <SelectItem value="medio">Médio</SelectItem>
-                    <SelectItem value="grave">Grave</SelectItem>
+                    <SelectItem value="BAIXO">Leve</SelectItem>
+                    <SelectItem value="MEDIO">Médio</SelectItem>
+                    <SelectItem value="ALTO">Grave</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input placeholder="Tipo (físico, químico…)" value={novoRisco.tipo} onChange={e => setNovoRisco({ ...novoRisco, tipo: e.target.value })} />

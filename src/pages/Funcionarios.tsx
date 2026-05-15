@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -18,76 +18,59 @@ import {
 import {
   ArrowLeft, Users, Plus, Search, Pencil, Trash2, Eye, Briefcase, UserPlus,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  BkFuncionario, BkCargo, BkSetor,
+  listarFuncionarios, criarFuncionario, atualizarFuncionario, deletarFuncionario,
+  listarCargos, criarCargo,
+  listarSetores, criarSetor,
+} from "@/lib/admissionalApi";
 
-type Cargo = { id: string; nome: string };
-type FuncionarioRow = {
-  id: string;
-  nome: string;
-  cpf: string;
-  cargo: string;
-  cargo_id: string | null;
-  setor: string;
-  data_nascimento: string | null;
-  data_admissao: string | null;
-  rg: string | null;
-  telefone: string | null;
-  email: string | null;
-};
-
-const formatCPF = (value: string) => {
-  const n = value.replace(/\D/g, "").slice(0, 11);
-  return n
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})/, "$1-$2");
-};
+const STATUS_OPTIONS = ["ATIVO", "INATIVO", "AFASTADO"];
 
 const empty = {
-  nome: "", cpf: "", cargo_id: "", setor: "",
-  data_nascimento: "", data_admissao: "",
-  rg: "", telefone: "", email: "",
+  matricula: "", nome: "", dataAdmissao: "",
+  status: "ATIVO", id_cargo: "", id_setor: "",
 };
 
 const Funcionarios = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [empresaNome, setEmpresaNome] = useState("Sua Empresa");
-  const [funcionarios, setFuncionarios] = useState<FuncionarioRow[]>([]);
-  const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [funcionarios, setFuncionarios] = useState<BkFuncionario[]>([]);
+  const [cargos, setCargos] = useState<BkCargo[]>([]);
+  const [setores, setSetores] = useState<BkSetor[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cadastro de cargo rápido
   const [novoCargo, setNovoCargo] = useState("");
+  const [novoSetor, setNovoSetor] = useState("");
 
-  // Form (criar/editar)
   const [form, setForm] = useState(empty);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewing, setViewing] = useState<FuncionarioRow | null>(null);
+  const [viewing, setViewing] = useState<BkFuncionario | null>(null);
 
-  // Busca + filtro
   const [search, setSearch] = useState("");
-  const [filtroCargo, setFiltroCargo] = useState<string>("TODOS");
+  const [filtroStatus, setFiltroStatus] = useState("TODOS");
 
   const fetchAll = async () => {
-    if (!user) return;
     setLoading(true);
-    const [pf, fn, cg] = await Promise.all([
-      supabase.from("profiles").select("razao_social").eq("user_id", user.id).maybeSingle(),
-      supabase.from("funcionarios").select("*").order("nome"),
-      supabase.from("cargos").select("id,nome").order("nome"),
-    ]);
-    if (pf.data?.razao_social) setEmpresaNome(pf.data.razao_social);
-    setFuncionarios((fn.data || []) as FuncionarioRow[]);
-    setCargos((cg.data || []) as Cargo[]);
-    setLoading(false);
+    try {
+      const [fns, cgs, sts] = await Promise.all([
+        listarFuncionarios(),
+        listarCargos(),
+        listarSetores(),
+      ]);
+      setFuncionarios(fns);
+      setCargos(cgs);
+      setSetores(sts);
+    } catch (err) {
+      toast.error("Erro ao carregar dados do servidor");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchAll(); /* eslint-disable-next-line */ }, [user]);
+  useEffect(() => { fetchAll(); }, []);
 
   const openNew = () => {
     setEditingId(null);
@@ -95,97 +78,106 @@ const Funcionarios = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (f: FuncionarioRow) => {
-    setEditingId(f.id);
+  const openEdit = (f: BkFuncionario) => {
+    setEditingId(f.id ?? null);
     setForm({
+      matricula: f.matricula,
       nome: f.nome,
-      cpf: f.cpf,
-      cargo_id: f.cargo_id || "",
-      setor: f.setor || "",
-      data_nascimento: f.data_nascimento || "",
-      data_admissao: f.data_admissao || "",
-      rg: f.rg || "",
-      telefone: f.telefone || "",
-      email: f.email || "",
+      dataAdmissao: f.dataAdmissao ? String(f.dataAdmissao).slice(0, 10) : "",
+      status: f.status,
+      id_cargo: f.id_cargo != null ? String(f.id_cargo) : "",
+      id_setor: f.id_setor != null ? String(f.id_setor) : "",
     });
     setDialogOpen(true);
   };
 
   const addCargoRapido = async () => {
-    if (!user || !novoCargo.trim()) return;
-    const { data, error } = await supabase
-      .from("cargos")
-      .insert({ user_id: user.id, nome: novoCargo.trim() })
-      .select().single();
-    if (error) return toast.error(error.message);
-    setCargos(prev => [...prev, data as Cargo].sort((a, b) => a.nome.localeCompare(b.nome)));
-    setForm(prev => ({ ...prev, cargo_id: data.id }));
-    setNovoCargo("");
-    toast.success("Cargo cadastrado");
+    if (!novoCargo.trim()) return;
+    try {
+      const novo = await criarCargo({ nome: novoCargo.trim() });
+      setCargos(prev => [...prev, novo].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setForm(prev => ({ ...prev, id_cargo: String(novo.id) }));
+      setNovoCargo("");
+      toast.success("Cargo cadastrado");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar cargo");
+    }
+  };
+
+  const addSetorRapido = async () => {
+    if (!novoSetor.trim()) return;
+    try {
+      const novo = await criarSetor({ nome: novoSetor.trim(), descricao: novoSetor.trim(), id_empresa: 1 });
+      setSetores(prev => [...prev, novo].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setForm(prev => ({ ...prev, id_setor: String(novo.id) }));
+      setNovoSetor("");
+      toast.success("Setor cadastrado");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar setor");
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-    if (!form.nome.trim() || !form.cpf.trim() || !form.cargo_id || !form.setor.trim()) {
-      return toast.error("Preencha nome, CPF, cargo e setor");
+    if (!form.matricula.trim() || !form.nome.trim() || !form.dataAdmissao || !form.id_cargo || !form.id_setor) {
+      return toast.error("Preencha todos os campos obrigatórios");
     }
-    const cargoNome = cargos.find(c => c.id === form.cargo_id)?.nome || "";
     const payload = {
-      user_id: user.id,
+      matricula: form.matricula.trim(),
       nome: form.nome.trim(),
-      cpf: form.cpf.trim(),
-      cargo: cargoNome,
-      cargo_id: form.cargo_id,
-      setor: form.setor.trim(),
-      data_nascimento: form.data_nascimento || null,
-      data_admissao: form.data_admissao || null,
-      rg: form.rg.trim() || null,
-      telefone: form.telefone.trim() || null,
-      email: form.email.trim() || null,
+      dataAdmissao: form.dataAdmissao,
+      status: form.status,
+      id_cargo: parseInt(form.id_cargo),
+      id_setor: parseInt(form.id_setor),
     };
-
-    if (editingId) {
-      const { data, error } = await supabase
-        .from("funcionarios").update(payload).eq("id", editingId).select().single();
-      if (error) return toast.error(error.message);
-      setFuncionarios(prev => prev.map(f => f.id === editingId ? (data as FuncionarioRow) : f));
-      toast.success("Funcionário atualizado");
-    } else {
-      const { data, error } = await supabase
-        .from("funcionarios").insert(payload).select().single();
-      if (error) return toast.error(error.message);
-      setFuncionarios(prev => [...prev, data as FuncionarioRow]
-        .sort((a, b) => a.nome.localeCompare(b.nome)));
-      toast.success("Funcionário cadastrado");
+    try {
+      if (editingId != null) {
+        await atualizarFuncionario(editingId, payload);
+        toast.success("Funcionário atualizado");
+      } else {
+        const novo = await criarFuncionario(payload);
+        setFuncionarios(prev => [...prev, novo].sort((a, b) => a.nome.localeCompare(b.nome)));
+        toast.success("Funcionário cadastrado");
+      }
+      await fetchAll();
+      setDialogOpen(false);
+      setForm(empty);
+      setEditingId(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar");
     }
-    setDialogOpen(false);
-    setForm(empty);
-    setEditingId(null);
   };
 
-  const remove = async (id: string) => {
-    if (!confirm("Excluir este funcionário? Atribuições de EPI e exames serão removidos.")) return;
-    const { error } = await supabase.from("funcionarios").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setFuncionarios(prev => prev.filter(f => f.id !== id));
-    toast.success("Funcionário excluído");
+  const remove = async (id: number) => {
+    if (!confirm("Excluir este funcionário?")) return;
+    try {
+      await deletarFuncionario(id);
+      setFuncionarios(prev => prev.filter(f => f.id !== id));
+      toast.success("Funcionário excluído");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir");
+    }
   };
 
-  // Busca + filtro com prioridade por relevância
+  const getNomeCargo = (id: number | null) =>
+    cargos.find(c => c.id === id)?.nome || "—";
+
+  const getNomeSetor = (id: number | null) =>
+    setores.find(s => s.id === id)?.nome || "—";
+
   const lista = useMemo(() => {
     const q = search.trim().toLowerCase();
     let arr = funcionarios.slice();
-    if (filtroCargo !== "TODOS") arr = arr.filter(f => f.cargo_id === filtroCargo);
+    if (filtroStatus !== "TODOS") arr = arr.filter(f => f.status === filtroStatus);
     if (!q) return arr;
-    const score = (f: FuncionarioRow) => {
+    const score = (f: BkFuncionario) => {
       const n = f.nome.toLowerCase();
       if (n === q) return 0;
       if (n.startsWith(q)) return 1;
       if (n.includes(q)) return 2;
-      if ((f.cpf || "").toLowerCase().includes(q)) return 3;
-      if ((f.cargo || "").toLowerCase().includes(q)) return 4;
-      if ((f.setor || "").toLowerCase().includes(q)) return 5;
+      if ((f.matricula || "").toLowerCase().includes(q)) return 3;
+      if (getNomeCargo(f.id_cargo).toLowerCase().includes(q)) return 4;
+      if (getNomeSetor(f.id_setor).toLowerCase().includes(q)) return 5;
       return 99;
     };
     return arr
@@ -193,11 +185,11 @@ const Funcionarios = () => {
       .filter(x => x.s < 99)
       .sort((a, b) => a.s - b.s || a.f.nome.localeCompare(b.f.nome))
       .map(x => x.f);
-  }, [funcionarios, search, filtroCargo]);
+  }, [funcionarios, search, filtroStatus, cargos, setores]);
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar empresaNome={empresaNome} />
+      <Navbar empresaNome="Sistema" />
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-7xl">
         <div className="flex items-center gap-3 mb-6">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
@@ -225,19 +217,19 @@ const Funcionarios = () => {
             <div className="md:col-span-2 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome, CPF, cargo ou setor..."
+                placeholder="Buscar por nome, matrícula, cargo ou setor..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
             <div>
-              <Select value={filtroCargo} onValueChange={setFiltroCargo}>
-                <SelectTrigger><SelectValue placeholder="Filtrar por cargo" /></SelectTrigger>
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger><SelectValue placeholder="Filtrar por status" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TODOS">Todos os cargos</SelectItem>
-                  {cargos.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                  <SelectItem value="TODOS">Todos os status</SelectItem>
+                  {STATUS_OPTIONS.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -262,10 +254,11 @@ const Funcionarios = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Matrícula</TableHead>
                       <TableHead>Nome</TableHead>
-                      <TableHead>CPF</TableHead>
                       <TableHead>Cargo</TableHead>
                       <TableHead>Setor</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Admissão</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -273,7 +266,7 @@ const Funcionarios = () => {
                   <TableBody>
                     {lista.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                           {funcionarios.length === 0
                             ? "Nenhum funcionário cadastrado"
                             : "Nenhum resultado para os filtros aplicados"}
@@ -281,17 +274,22 @@ const Funcionarios = () => {
                       </TableRow>
                     ) : lista.map(f => (
                       <TableRow key={f.id}>
+                        <TableCell className="font-mono text-sm">{f.matricula}</TableCell>
                         <TableCell className="font-medium">{f.nome}</TableCell>
-                        <TableCell>{f.cpf}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="gap-1">
-                            <Briefcase className="h-3 w-3" />{f.cargo || "—"}
+                            <Briefcase className="h-3 w-3" />{getNomeCargo(f.id_cargo)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{f.setor || "—"}</TableCell>
+                        <TableCell>{getNomeSetor(f.id_setor)}</TableCell>
                         <TableCell>
-                          {f.data_admissao
-                            ? format(new Date(f.data_admissao), "dd/MM/yyyy")
+                          <Badge variant={f.status === "ATIVO" ? "default" : "secondary"}>
+                            {f.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {f.dataAdmissao
+                            ? format(new Date(f.dataAdmissao), "dd/MM/yyyy")
                             : "—"}
                         </TableCell>
                         <TableCell className="text-right space-x-1">
@@ -301,7 +299,7 @@ const Funcionarios = () => {
                           <Button size="icon" variant="outline" onClick={() => openEdit(f)} title="Editar">
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="outline" onClick={() => remove(f.id)} title="Excluir">
+                          <Button size="icon" variant="outline" onClick={() => remove(f.id!)} title="Excluir">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -319,31 +317,50 @@ const Funcionarios = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
+            <DialogTitle>{editingId != null ? "Editar Funcionário" : "Novo Funcionário"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <Label>Nome completo *</Label>
-                <Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} required />
-              </div>
               <div>
-                <Label>CPF *</Label>
+                <Label>Matrícula *</Label>
                 <Input
-                  value={form.cpf}
-                  onChange={e => setForm({ ...form, cpf: formatCPF(e.target.value) })}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
+                  value={form.matricula}
+                  onChange={e => setForm({ ...form, matricula: e.target.value })}
+                  placeholder="Ex: MAT-001"
                   required
                 />
               </div>
               <div>
-                <Label>RG</Label>
-                <Input value={form.rg} onChange={e => setForm({ ...form, rg: e.target.value })} />
+                <Label>Nome completo *</Label>
+                <Input
+                  value={form.nome}
+                  onChange={e => setForm({ ...form, nome: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Status *</Label>
+                <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Data de admissão *</Label>
+                <Input
+                  type="date"
+                  value={form.dataAdmissao}
+                  onChange={e => setForm({ ...form, dataAdmissao: e.target.value })}
+                  required
+                />
               </div>
               <div>
                 <Label>Cargo *</Label>
-                <Select value={form.cargo_id} onValueChange={v => setForm({ ...form, cargo_id: v })}>
+                <Select value={form.id_cargo} onValueChange={v => setForm({ ...form, id_cargo: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione um cargo" /></SelectTrigger>
                   <SelectContent>
                     {cargos.length === 0 && (
@@ -352,7 +369,7 @@ const Funcionarios = () => {
                       </div>
                     )}
                     {cargos.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                      <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -370,31 +387,35 @@ const Funcionarios = () => {
               </div>
               <div>
                 <Label>Setor *</Label>
-                <Input value={form.setor} onChange={e => setForm({ ...form, setor: e.target.value })} required />
-              </div>
-              <div>
-                <Label>Data de nascimento</Label>
-                <Input type="date" value={form.data_nascimento}
-                  onChange={e => setForm({ ...form, data_nascimento: e.target.value })} />
-              </div>
-              <div>
-                <Label>Data de admissão</Label>
-                <Input type="date" value={form.data_admissao}
-                  onChange={e => setForm({ ...form, data_admissao: e.target.value })} />
-              </div>
-              <div>
-                <Label>Telefone</Label>
-                <Input value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} />
-              </div>
-              <div className="md:col-span-2">
-                <Label>E-mail</Label>
-                <Input type="email" value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })} />
+                <Select value={form.id_setor} onValueChange={v => setForm({ ...form, id_setor: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um setor" /></SelectTrigger>
+                  <SelectContent>
+                    {setores.length === 0 && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                        Cadastre um setor abaixo
+                      </div>
+                    )}
+                    {setores.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    placeholder="Cadastrar novo setor"
+                    value={novoSetor}
+                    onChange={e => setNovoSetor(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSetorRapido(); } }}
+                  />
+                  <Button type="button" variant="outline" onClick={addSetorRapido}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit">{editingId ? "Salvar" : "Cadastrar"}</Button>
+              <Button type="submit">{editingId != null ? "Salvar" : "Cadastrar"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -406,14 +427,15 @@ const Funcionarios = () => {
           <DialogHeader><DialogTitle>{viewing?.nome}</DialogTitle></DialogHeader>
           {viewing && (
             <div className="space-y-2 text-sm">
-              <p><strong>CPF:</strong> {viewing.cpf}</p>
-              <p><strong>RG:</strong> {viewing.rg || "—"}</p>
-              <p><strong>Cargo:</strong> {viewing.cargo || "—"}</p>
-              <p><strong>Setor:</strong> {viewing.setor || "—"}</p>
-              <p><strong>Nascimento:</strong> {viewing.data_nascimento ? format(new Date(viewing.data_nascimento), "dd/MM/yyyy") : "—"}</p>
-              <p><strong>Admissão:</strong> {viewing.data_admissao ? format(new Date(viewing.data_admissao), "dd/MM/yyyy") : "—"}</p>
-              <p><strong>Telefone:</strong> {viewing.telefone || "—"}</p>
-              <p><strong>E-mail:</strong> {viewing.email || "—"}</p>
+              <p><strong>Matrícula:</strong> {viewing.matricula}</p>
+              <p><strong>Status:</strong> {viewing.status}</p>
+              <p><strong>Cargo:</strong> {getNomeCargo(viewing.id_cargo)}</p>
+              <p><strong>Setor:</strong> {getNomeSetor(viewing.id_setor)}</p>
+              <p><strong>Admissão:</strong>{" "}
+                {viewing.dataAdmissao
+                  ? format(new Date(viewing.dataAdmissao), "dd/MM/yyyy")
+                  : "—"}
+              </p>
             </div>
           )}
         </DialogContent>

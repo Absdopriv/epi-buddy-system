@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = "http://localhost:3011";
 
 // ---- Backend shapes ----
 export interface BkCargo {
@@ -135,8 +135,61 @@ export const atualizarExameOcupacional = (id: number, data: Partial<BkExameOcupa
   req<void>(`/examesOcupacionais/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deletarExameOcupacional = (id: number) => req<void>(`/examesOcupacionais/${id}`, { method: "DELETE" });
 
-// Funcionários (somente leitura — gestão no módulo próprio)
+// Setores
+export interface BkSetor {
+  id: number;
+  nome: string;
+  descricao: string;
+  data_criacao: string;
+  data_atualizacao?: string;
+  id_empresa: number;
+}
+export const listarSetores = () => req<BkSetor[]>("/setores");
+export const criarSetor = (data: { nome: string; descricao: string; id_empresa: number }) =>
+  req<BkSetor>("/setores", {
+    method: "POST",
+    body: JSON.stringify({ ...data, data_criacao: new Date().toISOString() }),
+  });
+
+// Funcionários
 export const listarFuncionarios = () => req<BkFuncionario[]>("/funcionarios");
+export const criarFuncionario = (data: {
+  matricula: string;
+  nome: string;
+  dataAdmissao: string;
+  status: string;
+  id_cargo: number;
+  id_setor: number;
+}) =>
+  req<BkFuncionario>("/funcionarios", {
+    method: "POST",
+    body: JSON.stringify({
+      ...data,
+      data_criacao: new Date().toISOString(),
+      data_atualizacao: new Date().toISOString(),
+    }),
+  });
+export const atualizarFuncionario = (
+  id: number,
+  data: {
+    matricula: string;
+    nome: string;
+    dataAdmissao: string;
+    status: string;
+    id_cargo: number;
+    id_setor: number;
+  }
+) =>
+  req<void>(`/funcionarios/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      ...data,
+      data_criacao: new Date().toISOString(),
+      data_atualizacao: new Date().toISOString(),
+    }),
+  });
+export const deletarFuncionario = (id: number) =>
+  req<void>(`/funcionarios/${id}`, { method: "DELETE" });
 
 // Exames Funcionário
 export const listarExamesFuncionario = () => req<BkExameFuncionario[]>("/examesFuncionarios");
